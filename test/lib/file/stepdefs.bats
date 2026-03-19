@@ -72,3 +72,14 @@ EOF
 
   [ "$status" -eq 1 ]
 }
+
+@test "stepdefs_file_parse returns non-zero for an unsupported step type" {
+  write_file stepdefs.sh <<'EOF'
+@However I run '{command}'
+run "$command"
+EOF
+
+  run stepdefs_file_parse "$TEST_ROOT/stepdefs.sh"
+
+  [ "$status" -eq 1 ]
+}

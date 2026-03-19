@@ -63,6 +63,12 @@ teardown() {
   [ "$status" -eq 1 ]
 }
 
+@test "stepdef_parse returns non-zero for an unsupported step type" {
+  run stepdef_parse "@However I run '{command}'"
+
+  [ "$status" -eq 1 ]
+}
+
 @test "stepdef_register stores the parsed definition and body" {
   stepdef_parse "@When I run '{command}'"
 

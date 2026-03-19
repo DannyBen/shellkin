@@ -34,6 +34,10 @@ stepdef_parse() {
 
   pattern=${BASH_REMATCH[2]}
 
+  if ! stepdef_type_valid "${BASH_REMATCH[1]}"; then
+    return 1
+  fi
+
   STEPDEF_TYPE=${BASH_REMATCH[1]}
   STEPDEF_PATTERN=$pattern
   STEPDEF_REGEX=$(pattern_regex "$pattern")
