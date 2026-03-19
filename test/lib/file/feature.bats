@@ -5,7 +5,7 @@ load ../../test_helper.bash
 setup() {
   setup_test_environment
   eval "$(declare -f run | sed '1s/^run /bats_run /')"
-  source_libs core/trim syntax/pattern syntax/stepdef syntax/feature file/stepdefs user_helpers/run runtime/step output/test file/feature
+  source_libs core/colors core/trim syntax/pattern syntax/stepdef syntax/feature file/stepdefs user_helpers/run runtime/step output/test file/feature
 
   STEPDEF_TYPES=()
   STEPDEF_PATTERNS=()
@@ -22,7 +22,7 @@ setup() {
 }
 
 teardown() {
-  unset_functions trim _pattern_escape_literal pattern_regex pattern_tokens stepdef_type_valid stepdef_parse stepdef_register stepdefs_file_parse run step_run output_feature_start output_scenario_start output_step_result feature_line_parse feature_step_type_resolve feature_run feature_recorded_step_run feature_scenario_run
+  unset_functions enable_auto_colors print_in_color red green yellow blue magenta cyan black white bold underlined bold_underlined red_bold green_bold yellow_bold blue_bold magenta_bold cyan_bold black_bold white_bold red_underlined green_underlined yellow_underlined blue_underlined magenta_underlined cyan_underlined black_underlined white_underlined trim _pattern_escape_literal pattern_regex pattern_tokens stepdef_type_valid stepdef_parse stepdef_register stepdefs_file_parse run step_run output_feature_start output_scenario_start output_step_result feature_line_parse feature_step_type_resolve feature_run feature_recorded_step_run feature_scenario_run
   teardown_test_environment
 }
 

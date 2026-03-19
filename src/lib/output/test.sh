@@ -1,9 +1,9 @@
 output_feature_start() {
-  printf 'Feature: %s\n' "$1"
+  blue_bold "\nFeature: $1\n"
 }
 
 output_scenario_start() {
-  printf '  Scenario: %s\n' "$1"
+  bold "Scenario: $1"
 }
 
 output_step_result() {
@@ -11,10 +11,14 @@ output_step_result() {
   local type=$2
   local text=$3
   local symbol='✓'
+  local line="  $symbol $type $text"
 
   if ((status != 0)); then
     symbol='✗'
+    line="  $symbol $type $text"
+    red "$line"
+    return 0
   fi
 
-  printf '    %s %s %s\n' "$symbol" "$type" "$text"
+  green "$line"
 }
