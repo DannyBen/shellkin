@@ -5,10 +5,16 @@ load ../../test_helper.bash
 setup() {
   setup_test_environment
   source_libs steps/pattern steps/stepdef
+
+  STEPDEF_TYPES=()
+  STEPDEF_PATTERNS=()
+  STEPDEF_REGEXES=()
+  STEPDEF_TOKENS_LIST=()
+  STEPDEF_BODIES=()
 }
 
 teardown() {
-  unset_functions _pattern_escape_literal pattern_regex pattern_tokens stepdef_parse
+  unset_functions _pattern_escape_literal pattern_regex pattern_tokens stepdef_parse stepdef_register
   teardown_test_environment
 }
 
@@ -42,4 +48,30 @@ teardown() {
   run stepdef_parse "echo hello"
 
   [ "$status" -eq 1 ]
+}
+
+@test "stepdef_register stores the parsed definition and body" {
+  stepdef_parse "@When I run '{command}'"
+
+  stepdef_register 'run "$command"'
+
+  [ "${STEPDEF_TYPES[0]}" = "When" ]
+  [ "${STEPDEF_PATTERNS[0]}" = "I run '{command}'" ]
+  [ "${STEPDEF_REGEXES[0]}" = "I run '(.+)'" ]
+  [ "${STEPDEF_TOKENS_LIST[0]}" = "command" ]
+  [ "${STEPDEF_BODIES[0]}" = 'run "$command"' ]
+}
+
+@test "stepdef_register appends multiple step definitions in order" {
+  stepdef_parse "@Given I am in '{directory}'"
+  stepdef_register 'chdir "$directory"'
+
+  stepdef_parse "@Then the file '{path}' should exist"
+  stepdef_register '[[ -f "$path" ]]'
+
+  [ "${#STEPDEF_TYPES[@]}" -eq 2 ]
+  [ "${STEPDEF_TYPES[0]}" = "Given" ]
+  [ "${STEPDEF_TYPES[1]}" = "Then" ]
+  [ "${STEPDEF_TOKENS_LIST[0]}" = "directory" ]
+  [ "${STEPDEF_TOKENS_LIST[1]}" = "path" ]
 }

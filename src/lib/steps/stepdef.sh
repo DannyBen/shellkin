@@ -1,3 +1,13 @@
+stepdef_register() {
+  local body=$1
+
+  STEPDEF_TYPES+=("$STEPDEF_TYPE")
+  STEPDEF_PATTERNS+=("$STEPDEF_PATTERN")
+  STEPDEF_REGEXES+=("$STEPDEF_REGEX")
+  STEPDEF_TOKENS_LIST+=("$STEPDEF_TOKENS")
+  STEPDEF_BODIES+=("$body")
+}
+
 stepdef_parse() {
   local line=$1
   local pattern
