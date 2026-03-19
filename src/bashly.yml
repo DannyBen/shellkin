@@ -1,0 +1,14 @@
+name: shellkin
+help: BDD Test Framework for Shell Scripts
+version: 0.1.0
+
+commands:
+- name: test
+  alias: t
+  default: true
+  help: Run feature tests
+
+  args:
+  - name: dir
+    default: features
+    help: Path to features directory
