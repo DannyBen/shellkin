@@ -1,0 +1,73 @@
+#!/usr/bin/env bats
+
+load ../../test_helper.bash
+
+setup() {
+  setup_test_environment
+
+  eval "$(declare -f run | sed '1s/^run /bats_run /')"
+  source_libs syntax/pattern syntax/stepdef runtime/run runtime/step
+
+  STEPDEF_TYPES=()
+  STEPDEF_PATTERNS=()
+  STEPDEF_REGEXES=()
+  STEPDEF_TOKENS_LIST=()
+  STEPDEF_BODIES=()
+
+  LAST_EXIT_CODE=
+  LAST_STDOUT=
+  LAST_STDERR=
+  STEP_RESULT=
+}
+
+teardown() {
+  unset_functions _pattern_escape_literal pattern_regex pattern_tokens stepdef_type_valid stepdef_parse stepdef_register run step_run
+  teardown_test_environment
+}
+
+@test "step_run matches a step definition and runs its body" {
+  stepdef_parse "@When I run '{command}'"
+  stepdef_register 'run "$command"'
+
+  step_run When "I run 'printf hello'"
+
+  [ "$LAST_EXIT_CODE" -eq 0 ]
+  [ "$LAST_STDOUT" = "hello" ]
+  [ -z "$LAST_STDERR" ]
+}
+
+@test "step_run binds multiple tokens in declaration order" {
+  stepdef_parse "@When I copy {source} to {destination}"
+  stepdef_register 'STEP_RESULT="$source:$destination"'
+
+  step_run When "I copy left.txt to right.txt"
+
+  [ "$STEP_RESULT" = "left.txt:right.txt" ]
+}
+
+@test "step_run allows a generic Step definition to match any step type" {
+  stepdef_parse "@Step I am in '{directory}'"
+  stepdef_register 'STEP_RESULT="$directory"'
+
+  step_run Given "I am in 'tmp'"
+
+  [ "$STEP_RESULT" = "tmp" ]
+}
+
+@test "step_run returns non-zero when no step definition matches" {
+  stepdef_parse "@When I run '{command}'"
+  stepdef_register 'run "$command"'
+
+  bats_run step_run Then "the file 'somefile' should exist"
+
+  [ "$status" -eq 1 ]
+}
+
+@test "step_run returns the body status when the body fails" {
+  stepdef_parse "@Then the command should fail"
+  stepdef_register 'return 7'
+
+  bats_run step_run Then "the command should fail"
+
+  [ "$status" -eq 7 ]
+}
