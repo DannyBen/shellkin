@@ -1,3 +1,14 @@
+stepdef_type_valid() {
+  case $1 in
+    Given|When|Then|Step)
+      return 0
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
 stepdef_register() {
   local body=$1
 

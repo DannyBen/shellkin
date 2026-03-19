@@ -4,7 +4,7 @@ load ../../test_helper.bash
 
 setup() {
   setup_test_environment
-  source_libs steps/pattern steps/stepdef
+  source_libs syntax/pattern syntax/stepdef
 
   STEPDEF_TYPES=()
   STEPDEF_PATTERNS=()
@@ -14,8 +14,21 @@ setup() {
 }
 
 teardown() {
-  unset_functions _pattern_escape_literal pattern_regex pattern_tokens stepdef_parse stepdef_register
+  unset_functions _pattern_escape_literal pattern_regex pattern_tokens stepdef_type_valid stepdef_parse stepdef_register
   teardown_test_environment
+}
+
+@test "stepdef_type_valid accepts supported step keywords" {
+  stepdef_type_valid Given
+  stepdef_type_valid When
+  stepdef_type_valid Then
+  stepdef_type_valid Step
+}
+
+@test "stepdef_type_valid rejects unsupported step keywords" {
+  run stepdef_type_valid However
+
+  [ "$status" -eq 1 ]
 }
 
 @test "stepdef_parse reads the step type and template" {

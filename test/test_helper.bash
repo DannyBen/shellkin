@@ -36,8 +36,8 @@ fixture_path() {
 
 write_file() {
   local path="$1"
-  shift
-  printf '%s\n' "$@" >"$path"
+  mkdir -p "$(dirname "$TEST_ROOT/$path")"
+  cat >"$TEST_ROOT/$path"
 }
 
 unset_functions() {
