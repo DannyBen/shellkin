@@ -10,3 +10,9 @@ PATH="$SHELLKIN_ROOT:$PATH" run "$command"
 
 @Then the output should include '{text}'
 [[ "$LAST_STDOUT" == *"$text"* ]]
+
+@Then the exit code should mean success
+[[ "$LAST_EXIT_CODE" -eq 0 ]]
+
+@Then the exit code should mean failure
+[[ "$LAST_EXIT_CODE" -ne 0 ]]

@@ -22,3 +22,22 @@ output_step_result() {
 
   green "$line"
 }
+
+output_summary() {
+  local total_scenarios=$1
+  local failed_scenarios=$2
+  local passed_scenarios=$((total_scenarios - failed_scenarios))
+  local label=scenarios
+  local line
+
+  if ((total_scenarios == 1)); then
+    label=scenario
+  fi
+
+  if ((failed_scenarios == 0)); then
+    green_bold "\n$total_scenarios $label, $failed_scenarios failing"
+    return 0
+  fi
+
+  red_bold "\n$total_scenarios $label, $passed_scenarios passing, $failed_scenarios failing"
+}

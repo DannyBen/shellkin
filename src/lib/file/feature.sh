@@ -46,6 +46,7 @@ feature_run() {
           feature_scenario_run "$FEATURE_SCENARIO_NAME" background_steps scenario_steps || failed=1
         fi
         scenario_seen=1
+        ((TEST_SCENARIOS_TOTAL += 1))
         section=scenario
         in_description=0
         FEATURE_SCENARIO_NAME=$FEATURE_LINE_NAME
@@ -121,6 +122,10 @@ feature_scenario_run() {
     feature_recorded_step_run "$step" "$FEATURE_PREVIOUS_STEP_TYPE" || scenario_failed=1
   done
   set -e
+
+  if ((scenario_failed != 0)); then
+    ((TEST_SCENARIOS_FAILED += 1))
+  fi
 
   return "$scenario_failed"
 }

@@ -40,4 +40,5 @@ EOF
   [ "$status" -eq 0 ]
   assert_output_contains "Feature: Create a file"
   assert_output_contains "Scenario: Touch a file"
+  assert_output_contains "1 scenario, 0 failing"
 }

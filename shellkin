@@ -52,7 +52,7 @@ shellkin_test_usage() {
   echo
 
   printf "%s\n" "$(bold "Usage:")"
-  printf "  shellkin [test] [DIR]\n"
+  printf "  shellkin [test] [TARGET]\n"
   printf "  shellkin test --help | -h\n"
   echo
 
@@ -70,8 +70,8 @@ shellkin_test_usage() {
     printf "%s\n" "$(bold "Arguments:")"
 
     # :argument.usage
-    printf "  %s\n" "$(green "DIR")"
-    printf "    Path to features directory\n"
+    printf "  %s\n" "$(green "TARGET")"
+    printf "    Path to features directory or a single feature file\n"
     printf "    %s\n" "Default: features"
     echo
 
@@ -234,6 +234,7 @@ feature_run() {
           feature_scenario_run "$FEATURE_SCENARIO_NAME" background_steps scenario_steps || failed=1
         fi
         scenario_seen=1
+        ((TEST_SCENARIOS_TOTAL += 1))
         section=scenario
         in_description=0
         FEATURE_SCENARIO_NAME=$FEATURE_LINE_NAME
@@ -309,6 +310,10 @@ feature_scenario_run() {
     feature_recorded_step_run "$step" "$FEATURE_PREVIOUS_STEP_TYPE" || scenario_failed=1
   done
   set -e
+
+  if ((scenario_failed != 0)); then
+    ((TEST_SCENARIOS_FAILED += 1))
+  fi
 
   return "$scenario_failed"
 }
@@ -410,6 +415,25 @@ output_step_result() {
   fi
 
   green "$line"
+}
+
+output_summary() {
+  local total_scenarios=$1
+  local failed_scenarios=$2
+  local passed_scenarios=$((total_scenarios - failed_scenarios))
+  local label=scenarios
+  local line
+
+  if ((total_scenarios == 1)); then
+    label=scenario
+  fi
+
+  if ((failed_scenarios == 0)); then
+    green_bold "\n$total_scenarios $label, $failed_scenarios failing"
+    return 0
+  fi
+
+  red_bold "\n$total_scenarios $label, $passed_scenarios passing, $failed_scenarios failing"
 }
 
 # src/lib/runtime/step.sh
@@ -622,9 +646,15 @@ run() {
   return 0
 }
 
-# src/lib/validations/validate_features_dir.sh
-validate_features_dir() {
-  [[ -d "$1" ]] || echo "$1 must be an directory"
+# src/lib/validations/validate_test_target.sh
+validate_test_target() {
+  if [[ -f "$1" ]]; then
+    [[ $1 == *.feature ]] || echo "$1 must be a .feature file"
+    [[ -d "$(dirname "$1")/step_definitions" ]] || echo "$(dirname "$1")/step_definitions must be a directory"
+    return 0
+  fi
+
+  [[ -d "$1" ]] || echo "$1 must be a directory"
   [[ -d "$1/step_definitions" ]] || echo "$1/step_definitions must be a directory"
 }
 
@@ -633,25 +663,30 @@ validate_features_dir() {
 shellkin_test_command() {
 
   # src/commands/test.sh
-  features_dir="$(
-    CDPATH= cd "${args['dir']}" >/dev/null
-    printf '%s' "$PWD"
-  )"
-  stepdefs_dir="$features_dir/step_definitions"
+  target="$(realpath "${args['target']}")"
+  stepdefs_dir=
   feature_status=0
-  SHELLKIN_ROOT="$(
-    CDPATH= cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null
-    printf '%s' "$PWD"
-  )"
+  SHELLKIN_ROOT="$(realpath "$(dirname "${BASH_SOURCE[0]}")")"
 
   STEPDEF_TYPES=()
   STEPDEF_PATTERNS=()
   STEPDEF_REGEXES=()
   STEPDEF_TOKENS_LIST=()
   STEPDEF_BODIES=()
+  TEST_SCENARIOS_TOTAL=0
+  TEST_SCENARIOS_FAILED=0
+
+  if [[ -f $target ]]; then
+    features_dir="$(dirname "$target")"
+    stepdefs_dir="$features_dir/step_definitions"
+    feature_files=("$target")
+  else
+    features_dir="$target"
+    stepdefs_dir="$features_dir/step_definitions"
+    readarray -t feature_files < <(find "$features_dir" -maxdepth 1 -type f -name '*.feature' | sort)
+  fi
 
   readarray -t stepdef_files < <(find "$stepdefs_dir" -maxdepth 1 -type f \( -name '*.sh' -o -name '*.bash' \) | sort)
-  readarray -t feature_files < <(find "$features_dir" -maxdepth 1 -type f -name '*.feature' | sort)
 
   for stepdef_file in "${stepdef_files[@]}"; do
     stepdefs_file_parse "$stepdef_file"
@@ -660,6 +695,8 @@ shellkin_test_command() {
   for feature_file in "${feature_files[@]}"; do
     feature_run "$feature_file" || feature_status=1
   done
+
+  output_summary "$TEST_SCENARIOS_TOTAL" "$TEST_SCENARIOS_FAILED"
 
   return "$feature_status"
 
@@ -778,8 +815,8 @@ shellkin_test_parse_requirements() {
         # :command.parse_requirements_case
         # :command.parse_requirements_case_simple
         # :argument.case
-        if [[ -z ${args['dir']+x} ]]; then
-          args['dir']=$1
+        if [[ -z ${args['target']+x} ]]; then
+          args['target']=$1
           shift
         else
           printf "invalid argument: %s\n" "$key" >&2
@@ -792,14 +829,14 @@ shellkin_test_parse_requirements() {
   done
 
   # :command.default_assignments
-  [[ -n ${args['dir']:-} ]] || args['dir']="features"
+  [[ -n ${args['target']:-} ]] || args['target']="features"
 
   # :command.validations
   # :argument.validations
-  if [[ -v args['dir'] ]]; then
-    validation_output="$(validate_features_dir "${args['dir']:-}")"
+  if [[ -v args['target'] ]]; then
+    validation_output="$(validate_test_target "${args['target']:-}")"
     if [[ -n "$validation_output" ]]; then
-      printf "validation error in %s:\n%s\n" "DIR" "$validation_output" >&2
+      printf "validation error in %s:\n%s\n" "TARGET" "$validation_output" >&2
       exit 1
     fi
   fi
