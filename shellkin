@@ -325,8 +325,10 @@ feature_recorded_step_run() {
 
   resolved_type=$(feature_step_type_resolve "$previous_type" "$step_keyword") || return 1
   FEATURE_PREVIOUS_STEP_TYPE=$resolved_type
-  DOC_STRING=
-  [[ -n $doc_string ]] && DOC_STRING=$doc_string
+  export DOC_STRING=
+  if [[ -n $doc_string ]]; then
+    export DOC_STRING=$doc_string
+  fi
 
   step_run "$resolved_type" "$step_text"
   status=$?
@@ -372,14 +374,14 @@ feature_doc_string_apply() {
     background)
       ((${#background_steps_ref[@]} > 0)) || return 1
       last_index=$((${#background_steps_ref[@]} - 1))
-      recorded=${background_steps_ref[$last_index]}
-      background_steps_ref[$last_index]="$recorded"$'\t'"$doc_string"
+      recorded=${background_steps_ref[last_index]}
+      background_steps_ref[last_index]="$recorded"$'\t'"$doc_string"
       ;;
     scenario)
       ((${#scenario_steps_ref[@]} > 0)) || return 1
       last_index=$((${#scenario_steps_ref[@]} - 1))
-      recorded=${scenario_steps_ref[$last_index]}
-      scenario_steps_ref[$last_index]="$recorded"$'\t'"$doc_string"
+      recorded=${scenario_steps_ref[last_index]}
+      scenario_steps_ref[last_index]="$recorded"$'\t'"$doc_string"
       ;;
     *)
       return 1
@@ -554,7 +556,6 @@ feature_line_parse() {
   FEATURE_LINE_NAME=
   FEATURE_STEP_TYPE=
   FEATURE_STEP_TEXT=
-  FEATURE_DOC_STRING_FENCE=
 
   if [[ -z $line ]]; then
     FEATURE_LINE_KIND=blank
@@ -712,10 +713,12 @@ run() {
   set +e
   bash -lc "$command_string" >"$stdout_file" 2>"$stderr_file"
   LAST_EXIT_CODE=$?
+  export LAST_EXIT_CODE
   set -e
 
   LAST_STDOUT=$(<"$stdout_file")
   LAST_STDERR=$(<"$stderr_file")
+  export LAST_STDOUT LAST_STDERR
   rm -f "$stdout_file" "$stderr_file"
 
   return 0
@@ -742,6 +745,7 @@ shellkin_test_command() {
   stepdefs_dir=
   feature_status=0
   SHELLKIN_ROOT="$(realpath "$(dirname "${BASH_SOURCE[0]}")")"
+  export SHELLKIN_ROOT
 
   STEPDEF_TYPES=()
   STEPDEF_PATTERNS=()

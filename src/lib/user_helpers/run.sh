@@ -9,10 +9,12 @@ run() {
   set +e
   bash -lc "$command_string" >"$stdout_file" 2>"$stderr_file"
   LAST_EXIT_CODE=$?
+  export LAST_EXIT_CODE
   set -e
 
   LAST_STDOUT=$(<"$stdout_file")
   LAST_STDERR=$(<"$stderr_file")
+  export LAST_STDOUT LAST_STDERR
   rm -f "$stdout_file" "$stderr_file"
 
   return 0

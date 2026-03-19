@@ -7,7 +7,6 @@ feature_line_parse() {
   FEATURE_LINE_NAME=
   FEATURE_STEP_TYPE=
   FEATURE_STEP_TEXT=
-  FEATURE_DOC_STRING_FENCE=
 
   if [[ -z $line ]]; then
     FEATURE_LINE_KIND=blank

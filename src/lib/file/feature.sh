@@ -137,8 +137,10 @@ feature_recorded_step_run() {
 
   resolved_type=$(feature_step_type_resolve "$previous_type" "$step_keyword") || return 1
   FEATURE_PREVIOUS_STEP_TYPE=$resolved_type
-  DOC_STRING=
-  [[ -n $doc_string ]] && DOC_STRING=$doc_string
+  export DOC_STRING=
+  if [[ -n $doc_string ]]; then
+    export DOC_STRING=$doc_string
+  fi
 
   step_run "$resolved_type" "$step_text"
   status=$?
@@ -184,14 +186,14 @@ feature_doc_string_apply() {
     background)
       ((${#background_steps_ref[@]} > 0)) || return 1
       last_index=$((${#background_steps_ref[@]} - 1))
-      recorded=${background_steps_ref[$last_index]}
-      background_steps_ref[$last_index]="$recorded"$'\t'"$doc_string"
+      recorded=${background_steps_ref[last_index]}
+      background_steps_ref[last_index]="$recorded"$'\t'"$doc_string"
       ;;
     scenario)
       ((${#scenario_steps_ref[@]} > 0)) || return 1
       last_index=$((${#scenario_steps_ref[@]} - 1))
-      recorded=${scenario_steps_ref[$last_index]}
-      scenario_steps_ref[$last_index]="$recorded"$'\t'"$doc_string"
+      recorded=${scenario_steps_ref[last_index]}
+      scenario_steps_ref[last_index]="$recorded"$'\t'"$doc_string"
       ;;
     *)
       return 1
