@@ -12,3 +12,4 @@ commands:
   - name: dir
     default: features
     help: Path to features directory
+    validate: [features_dir]
