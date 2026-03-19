@@ -1,5 +1,5 @@
 name: shellkin
-help: BDD Test Framework for Shell Scripts
+help: BDD Test Framework for Bash Scripts
 version: 0.1.0
 
 commands:

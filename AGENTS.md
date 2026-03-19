@@ -21,6 +21,7 @@ Shellkin is a Bashly-based Gherkin-style test framework for shell scripts.
 - Use uppercase names for shared/framework state and lowercase for local variables.
 - Keep user-facing helper functions separate from framework internals.
 - Keep output logic isolated from parsing and runtime logic.
+- Prefer established Gherkin conventions and syntax over custom forms when practical.
 
 ## Tests
 

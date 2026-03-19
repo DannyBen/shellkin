@@ -17,12 +17,14 @@ setup() {
   LAST_STDERR=
   FEATURE_NAME=
   FEATURE_PREVIOUS_STEP_TYPE=
+  TEST_SCENARIOS_TOTAL=0
+  TEST_SCENARIOS_FAILED=0
 
   cd "$TEST_ROOT"
 }
 
 teardown() {
-  unset_functions enable_auto_colors print_in_color red green yellow blue magenta cyan black white bold underlined bold_underlined red_bold green_bold yellow_bold blue_bold magenta_bold cyan_bold black_bold white_bold red_underlined green_underlined yellow_underlined blue_underlined magenta_underlined cyan_underlined black_underlined white_underlined trim _pattern_escape_literal pattern_regex pattern_tokens stepdef_type_valid stepdef_parse stepdef_register stepdefs_file_parse run step_run output_feature_start output_scenario_start output_step_result feature_line_parse feature_step_type_resolve feature_run feature_recorded_step_run feature_scenario_run
+  unset_functions enable_auto_colors print_in_color red green yellow blue magenta cyan black white bold underlined bold_underlined red_bold green_bold yellow_bold blue_bold magenta_bold cyan_bold black_bold white_bold red_underlined green_underlined yellow_underlined blue_underlined magenta_underlined cyan_underlined black_underlined white_underlined trim _pattern_escape_literal pattern_regex pattern_tokens stepdef_type_valid stepdef_parse stepdef_register stepdefs_file_parse run step_run output_feature_start output_scenario_start output_step_result output_summary feature_line_parse feature_step_type_resolve feature_run feature_recorded_step_run feature_scenario_run feature_doc_string_apply
   teardown_test_environment
 }
 
@@ -134,4 +136,22 @@ EOF
   bats_run feature_run "$TEST_ROOT/test.feature"
 
   [ "$status" -eq 1 ]
+}
+
+@test "feature_doc_string_apply attaches a doc string to the previous scenario step" {
+  background_steps=()
+  scenario_steps=($'Then\tthe output should match')
+
+  feature_doc_string_apply $'first line\nsecond line' scenario background_steps scenario_steps
+
+  [ "${scenario_steps[0]}" = $'Then\tthe output should match\tfirst line\nsecond line' ]
+}
+
+@test "feature_recorded_step_run exposes an attached doc string through DOC_STRING" {
+  stepdef_parse "@Then the output should match"
+  stepdef_register 'printf "%s" "$DOC_STRING" > "$TEST_ROOT/doc_string.txt"'
+
+  feature_recorded_step_run $'Then\tthe output should match\tfirst line\nsecond line' ""
+
+  [ "$(cat "$TEST_ROOT/doc_string.txt")" = $'first line\nsecond line' ]
 }

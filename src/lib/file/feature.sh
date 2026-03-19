@@ -5,7 +5,11 @@ feature_run() {
   local feature_seen=0
   local scenario_seen=0
   local in_description=0
+  local in_doc_string=0
   local failed=0
+  local doc_string_indent=
+  local doc_string_content=
+  local doc_string_line=
   local -a background_steps=()
   local -a scenario_steps=()
 
@@ -14,6 +18,27 @@ feature_run() {
   set +e
 
   while IFS= read -r line || [[ -n $line ]]; do
+    if ((in_doc_string != 0)); then
+      if [[ $(trim "$line") == '"""' ]]; then
+        feature_doc_string_apply "$doc_string_content" "$section" background_steps scenario_steps || failed=1
+        in_doc_string=0
+        doc_string_indent=
+        doc_string_content=
+        continue
+      fi
+
+      doc_string_line=$line
+      if [[ -n $doc_string_indent && $doc_string_line == "$doc_string_indent"* ]]; then
+        doc_string_line=${doc_string_line#"$doc_string_indent"}
+      fi
+
+      if [[ -n $doc_string_content ]]; then
+        doc_string_content+=$'\n'
+      fi
+      doc_string_content+=$doc_string_line
+      continue
+    fi
+
     feature_line_parse "$line"
 
     case $FEATURE_LINE_KIND in
@@ -68,6 +93,12 @@ feature_run() {
         esac
         continue
         ;;
+      doc_string_fence)
+        doc_string_indent=${line%%\"\"\"*}
+        in_doc_string=1
+        doc_string_content=
+        continue
+        ;;
       other)
         if [[ $section == feature && $in_description == 1 ]]; then
           continue
@@ -91,12 +122,23 @@ feature_recorded_step_run() {
   local recorded=$1
   local previous_type=$2
   local step_keyword=${recorded%%$'\t'*}
-  local step_text=${recorded#*$'\t'}
+  local remainder=${recorded#*$'\t'}
+  local step_text
+  local doc_string=
   local resolved_type
   local status
 
+  if [[ $remainder == *$'\t'* ]]; then
+    step_text=${remainder%%$'\t'*}
+    doc_string=${remainder#*$'\t'}
+  else
+    step_text=$remainder
+  fi
+
   resolved_type=$(feature_step_type_resolve "$previous_type" "$step_keyword") || return 1
   FEATURE_PREVIOUS_STEP_TYPE=$resolved_type
+  DOC_STRING=
+  [[ -n $doc_string ]] && DOC_STRING=$doc_string
 
   step_run "$resolved_type" "$step_text"
   status=$?
@@ -128,4 +170,31 @@ feature_scenario_run() {
   fi
 
   return "$scenario_failed"
+}
+
+feature_doc_string_apply() {
+  local doc_string=$1
+  local section=$2
+  local -n background_steps_ref=$3
+  local -n scenario_steps_ref=$4
+  local last_index
+  local recorded
+
+  case $section in
+    background)
+      ((${#background_steps_ref[@]} > 0)) || return 1
+      last_index=$((${#background_steps_ref[@]} - 1))
+      recorded=${background_steps_ref[$last_index]}
+      background_steps_ref[$last_index]="$recorded"$'\t'"$doc_string"
+      ;;
+    scenario)
+      ((${#scenario_steps_ref[@]} > 0)) || return 1
+      last_index=$((${#scenario_steps_ref[@]} - 1))
+      recorded=${scenario_steps_ref[$last_index]}
+      scenario_steps_ref[$last_index]="$recorded"$'\t'"$doc_string"
+      ;;
+    *)
+      return 1
+      ;;
+  esac
 }

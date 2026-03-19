@@ -1,9 +1,9 @@
 output_feature_start() {
-  blue_bold "\nFeature: $1\n"
+  blue_bold "\nFeature: $1"
 }
 
 output_scenario_start() {
-  bold "Scenario: $1"
+  bold "\nScenario: $1"
 }
 
 output_step_result() {

@@ -7,6 +7,7 @@ feature_line_parse() {
   FEATURE_LINE_NAME=
   FEATURE_STEP_TYPE=
   FEATURE_STEP_TEXT=
+  FEATURE_DOC_STRING_FENCE=
 
   if [[ -z $line ]]; then
     FEATURE_LINE_KIND=blank
@@ -39,6 +40,11 @@ feature_line_parse() {
     FEATURE_LINE_KIND=step
     FEATURE_STEP_TYPE=${BASH_REMATCH[1]}
     FEATURE_STEP_TEXT=${BASH_REMATCH[2]}
+    return 0
+  fi
+
+  if [[ $line == '"""' ]]; then
+    FEATURE_LINE_KIND=doc_string_fence
     return 0
   fi
 

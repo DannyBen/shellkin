@@ -53,6 +53,12 @@ teardown() {
   [ "$FEATURE_LINE_NAME" = "plain descriptive text" ]
 }
 
+@test "feature_line_parse recognizes a doc string fence" {
+  feature_line_parse '  """'
+
+  [ "$FEATURE_LINE_KIND" = "doc_string_fence" ]
+}
+
 @test "feature_step_type_resolve keeps concrete step types" {
   run feature_step_type_resolve When Then
 
