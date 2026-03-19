@@ -127,7 +127,7 @@ inspect_args() {
 }
 
 # :command.user_lib
-# src/lib/colors.sh
+# src/lib/core/colors.sh
 enable_auto_colors() {
   if [[ -z ${NO_COLOR+x} && ! -t 1 ]]; then
     NO_COLOR=1
@@ -185,16 +185,449 @@ trim() {
   printf '%s' "$value"
 }
 
+# src/lib/file/feature.sh
+feature_run() {
+  local feature_file=$1
+  local line
+  local section=
+  local feature_seen=0
+  local scenario_seen=0
+  local in_description=0
+  local failed=0
+  local -a background_steps=()
+  local -a scenario_steps=()
+
+  FEATURE_NAME=
+
+  set +e
+
+  while IFS= read -r line || [[ -n $line ]]; do
+    feature_line_parse "$line"
+
+    case $FEATURE_LINE_KIND in
+      blank|comment)
+        continue
+        ;;
+      feature)
+        feature_seen=1
+        section=feature
+        in_description=1
+        FEATURE_NAME=$FEATURE_LINE_NAME
+        continue
+        ;;
+      background)
+        if ((feature_seen == 0 || scenario_seen != 0)); then
+          failed=1
+          break
+        fi
+        section=background
+        in_description=0
+        continue
+        ;;
+      scenario)
+        if ((feature_seen == 0)); then
+          failed=1
+          break
+        fi
+        if ((scenario_seen != 0)); then
+          feature_scenario_run background_steps scenario_steps || failed=1
+        fi
+        scenario_seen=1
+        section=scenario
+        in_description=0
+        scenario_steps=()
+        continue
+        ;;
+      step)
+        in_description=0
+        case $section in
+          background)
+            background_steps+=("$FEATURE_STEP_TYPE"$'\t'"$FEATURE_STEP_TEXT")
+            ;;
+          scenario)
+            scenario_steps+=("$FEATURE_STEP_TYPE"$'\t'"$FEATURE_STEP_TEXT")
+            ;;
+          *)
+            failed=1
+            ;;
+        esac
+        continue
+        ;;
+      other)
+        if [[ $section == feature && $in_description == 1 ]]; then
+          continue
+        fi
+        failed=1
+        ;;
+    esac
+  done < "$feature_file"
+
+  if ((failed == 0 && scenario_seen != 0)); then
+    feature_scenario_run background_steps scenario_steps || failed=1
+  elif ((scenario_seen != 0)); then
+    feature_scenario_run background_steps scenario_steps || failed=1
+  fi
+
+  set -e
+  return "$failed"
+}
+
+feature_recorded_step_run() {
+  local recorded=$1
+  local previous_type=$2
+  local step_keyword=${recorded%%$'\t'*}
+  local step_text=${recorded#*$'\t'}
+  local resolved_type
+
+  resolved_type=$(feature_step_type_resolve "$previous_type" "$step_keyword") || return 1
+  FEATURE_PREVIOUS_STEP_TYPE=$resolved_type
+
+  step_run "$resolved_type" "$step_text"
+}
+
+feature_scenario_run() {
+  local -n background_steps_ref=$1
+  local -n scenario_steps_ref=$2
+  local step
+  local scenario_failed=0
+
+  FEATURE_PREVIOUS_STEP_TYPE=
+
+  set +e
+  for step in "${background_steps_ref[@]}"; do
+    feature_recorded_step_run "$step" "$FEATURE_PREVIOUS_STEP_TYPE" || scenario_failed=1
+  done
+  for step in "${scenario_steps_ref[@]}"; do
+    feature_recorded_step_run "$step" "$FEATURE_PREVIOUS_STEP_TYPE" || scenario_failed=1
+  done
+  set -e
+
+  return "$scenario_failed"
+}
+
+# src/lib/file/stepdefs.sh
+stepdefs_file_parse() {
+  local file=$1
+  local line
+  local trimmed_line
+  local current_type=
+  local current_pattern=
+  local current_regex=
+  local current_tokens=
+  local current_body=
+
+  while IFS= read -r line || [[ -n $line ]]; do
+    trimmed_line=$(trim "$line")
+
+    if [[ $trimmed_line == @* ]]; then
+      if [[ -n $current_type ]]; then
+        STEPDEF_TYPE=$current_type
+        STEPDEF_PATTERN=$current_pattern
+        STEPDEF_REGEX=$current_regex
+        STEPDEF_TOKENS=$current_tokens
+        stepdef_register "$current_body"
+      fi
+
+      if ! stepdef_parse "$trimmed_line"; then
+        return 1
+      fi
+
+      current_type=$STEPDEF_TYPE
+      current_pattern=$STEPDEF_PATTERN
+      current_regex=$STEPDEF_REGEX
+      current_tokens=$STEPDEF_TOKENS
+      current_body=
+      continue
+    fi
+
+    if [[ -z $current_type ]]; then
+      continue
+    fi
+
+    if [[ -z $trimmed_line && -n $current_body ]]; then
+      STEPDEF_TYPE=$current_type
+      STEPDEF_PATTERN=$current_pattern
+      STEPDEF_REGEX=$current_regex
+      STEPDEF_TOKENS=$current_tokens
+      stepdef_register "$current_body"
+
+      current_type=
+      current_pattern=
+      current_regex=
+      current_tokens=
+      current_body=
+      continue
+    fi
+
+    if [[ -z $trimmed_line && -z $current_body ]]; then
+      continue
+    fi
+
+    if [[ -n $current_body ]]; then
+      current_body+=$'\n'
+    fi
+    current_body+=$line
+  done < "$file"
+
+  if [[ -n $current_type ]]; then
+    STEPDEF_TYPE=$current_type
+    STEPDEF_PATTERN=$current_pattern
+    STEPDEF_REGEX=$current_regex
+    STEPDEF_TOKENS=$current_tokens
+    stepdef_register "$current_body"
+  fi
+}
+
+# src/lib/runtime/run.sh
+run() {
+  local command_string=$1
+  local stdout_file
+  local stderr_file
+
+  stdout_file=$(mktemp)
+  stderr_file=$(mktemp)
+
+  set +e
+  bash -lc "$command_string" >"$stdout_file" 2>"$stderr_file"
+  LAST_EXIT_CODE=$?
+  set -e
+
+  LAST_STDOUT=$(<"$stdout_file")
+  LAST_STDERR=$(<"$stderr_file")
+  rm -f "$stdout_file" "$stderr_file"
+
+  return 0
+}
+
+# src/lib/runtime/step.sh
+step_run() {
+  local type=$1
+  local text=$2
+  local i
+  local j
+  local step_type
+  local body
+  local -a tokens=()
+
+  for i in "${!STEPDEF_TYPES[@]}"; do
+    step_type=${STEPDEF_TYPES[$i]}
+    [[ $step_type == "$type" || $step_type == "Step" ]] || continue
+
+    if [[ $text =~ ${STEPDEF_REGEXES[$i]} ]]; then
+      if [[ -n ${STEPDEF_TOKENS_LIST[$i]} ]]; then
+        read -r -a tokens <<< "${STEPDEF_TOKENS_LIST[$i]}"
+      else
+        tokens=()
+      fi
+
+      if ((${#tokens[@]} != ${#BASH_REMATCH[@]} - 1)); then
+        return 1
+      fi
+
+      for j in "${!tokens[@]}"; do
+        printf -v "${tokens[$j]}" '%s' "${BASH_REMATCH[$((j + 1))]}"
+        export "${tokens[$j]}"
+      done
+
+      body=${STEPDEF_BODIES[$i]}
+      eval "$body"
+      return $?
+    fi
+  done
+
+  return 1
+}
+
+# src/lib/syntax/feature.sh
+feature_line_parse() {
+  local line
+
+  line=$(trim "$1")
+
+  FEATURE_LINE_KIND=
+  FEATURE_LINE_NAME=
+  FEATURE_STEP_TYPE=
+  FEATURE_STEP_TEXT=
+
+  if [[ -z $line ]]; then
+    FEATURE_LINE_KIND=blank
+    return 0
+  fi
+
+  if [[ $line == \#* ]]; then
+    FEATURE_LINE_KIND=comment
+    return 0
+  fi
+
+  if [[ $line =~ ^Feature:[[:space:]]*(.*)$ ]]; then
+    FEATURE_LINE_KIND=feature
+    FEATURE_LINE_NAME=${BASH_REMATCH[1]}
+    return 0
+  fi
+
+  if [[ $line =~ ^Background:[[:space:]]*$ ]]; then
+    FEATURE_LINE_KIND=background
+    return 0
+  fi
+
+  if [[ $line =~ ^Scenario:[[:space:]]*(.*)$ ]]; then
+    FEATURE_LINE_KIND=scenario
+    FEATURE_LINE_NAME=${BASH_REMATCH[1]}
+    return 0
+  fi
+
+  if [[ $line =~ ^(Given|When|Then|And|But)[[:space:]]+(.+)$ ]]; then
+    FEATURE_LINE_KIND=step
+    FEATURE_STEP_TYPE=${BASH_REMATCH[1]}
+    FEATURE_STEP_TEXT=${BASH_REMATCH[2]}
+    return 0
+  fi
+
+  FEATURE_LINE_KIND=other
+  FEATURE_LINE_NAME=$line
+}
+
+feature_step_type_resolve() {
+  local previous_type=$1
+  local current_type=$2
+
+  case $current_type in
+    And|But)
+      [[ -n $previous_type ]] || return 1
+      printf '%s' "$previous_type"
+      ;;
+    *)
+      printf '%s' "$current_type"
+      ;;
+  esac
+}
+
+# src/lib/syntax/pattern.sh
+pattern_regex() {
+  local pattern=$1
+  local compiled=
+  local remainder=$pattern
+  local literal
+
+  while [[ $remainder =~ ^([^{}]*)\{([A-Za-z_][A-Za-z0-9_]*)\}(.*)$ ]]; do
+    literal=${BASH_REMATCH[1]}
+    remainder=${BASH_REMATCH[3]}
+
+    compiled+=$(_pattern_escape_literal "$literal")
+    compiled+="(.+)"
+  done
+
+  compiled+=$(_pattern_escape_literal "$remainder")
+
+  printf '%s' "$compiled"
+}
+
+pattern_tokens() {
+  local pattern=$1
+  local remainder=$pattern
+  local tokens=()
+
+  while [[ $remainder =~ ^([^{}]*)\{([A-Za-z_][A-Za-z0-9_]*)\}(.*)$ ]]; do
+    tokens+=("${BASH_REMATCH[2]}")
+    remainder=${BASH_REMATCH[3]}
+  done
+
+  printf '%s' "${tokens[*]}"
+}
+
+_pattern_escape_literal() {
+  printf '%s' "$1" | sed -e 's/[][(){}.^$+?|\\]/\\&/g'
+}
+
+# src/lib/syntax/stepdef.sh
+stepdef_type_valid() {
+  case $1 in
+    Given|When|Then|Step)
+      return 0
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
+stepdef_register() {
+  local body=$1
+
+  STEPDEF_TYPES+=("$STEPDEF_TYPE")
+  STEPDEF_PATTERNS+=("$STEPDEF_PATTERN")
+  STEPDEF_REGEXES+=("$STEPDEF_REGEX")
+  STEPDEF_TOKENS_LIST+=("$STEPDEF_TOKENS")
+  STEPDEF_BODIES+=("$body")
+}
+
+stepdef_parse() {
+  local line=$1
+  local pattern
+
+  STEPDEF_TYPE=
+  STEPDEF_PATTERN=
+  STEPDEF_REGEX=
+  STEPDEF_TOKENS=
+
+  if [[ ! $line =~ ^@([A-Za-z]+)[[:space:]]+(.+)$ ]]; then
+    return 1
+  fi
+
+  pattern=${BASH_REMATCH[2]}
+
+  if ! stepdef_type_valid "${BASH_REMATCH[1]}"; then
+    return 1
+  fi
+
+  STEPDEF_TYPE=${BASH_REMATCH[1]}
+  STEPDEF_PATTERN=$pattern
+  STEPDEF_REGEX=$(pattern_regex "$pattern")
+  STEPDEF_TOKENS=$(pattern_tokens "$pattern")
+
+  return 0
+}
+
+# src/lib/validations/validate_features_dir.sh
+validate_features_dir() {
+  [[ -d "$1" ]] || echo "$1 must be an directory"
+  [[ -d "$1/step_definitions" ]] || echo "$1/step_definitions must be a directory"
+}
+
 # :command.command_functions
 # :command.function
 shellkin_test_command() {
 
   # src/commands/test.sh
-  echo "# This file is located at 'src/commands/test.sh'."
-  echo "# It contains the implementation for the 'shellkin test' command."
-  echo "# The code you write here will be wrapped by a function named 'shellkin_test_command()'."
-  echo "# Feel free to edit this file; your changes will persist when regenerating."
-  inspect_args
+  features_dir="$(
+    CDPATH= cd "${args['dir']}" >/dev/null
+    printf '%s' "$PWD"
+  )"
+  stepdefs_dir="$features_dir/step_definitions"
+  feature_status=0
+  SHELLKIN_ROOT="$(
+    CDPATH= cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null
+    printf '%s' "$PWD"
+  )"
+
+  STEPDEF_TYPES=()
+  STEPDEF_PATTERNS=()
+  STEPDEF_REGEXES=()
+  STEPDEF_TOKENS_LIST=()
+  STEPDEF_BODIES=()
+
+  readarray -t stepdef_files < <(find "$stepdefs_dir" -maxdepth 1 -type f \( -name '*.sh' -o -name '*.bash' \) | sort)
+  readarray -t feature_files < <(find "$features_dir" -maxdepth 1 -type f -name '*.feature' | sort)
+
+  for stepdef_file in "${stepdef_files[@]}"; do
+    stepdefs_file_parse "$stepdef_file"
+  done
+
+  for feature_file in "${feature_files[@]}"; do
+    feature_run "$feature_file" || feature_status=1
+  done
+
+  return "$feature_status"
 
 }
 
@@ -327,6 +760,16 @@ shellkin_test_parse_requirements() {
   # :command.default_assignments
   [[ -n ${args['dir']:-} ]] || args['dir']="features"
 
+  # :command.validations
+  # :argument.validations
+  if [[ -v args['dir'] ]]; then
+    validation_output="$(validate_features_dir "${args['dir']:-}")"
+    if [[ -n "$validation_output" ]]; then
+      printf "validation error in %s:\n%s\n" "DIR" "$validation_output" >&2
+      exit 1
+    fi
+  fi
+
 }
 
 # :command.initialize
@@ -337,7 +780,7 @@ initialize() {
 }
 
 # :command.run
-run() {
+bashly_run() {
   # :command.globals
   declare -g long_usage=''
   declare -g -A args=()
@@ -355,5 +798,5 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
   # :command.start
   command_line_args=("$@")
   initialize
-  run "${command_line_args[@]}"
+  bashly_run "${command_line_args[@]}"
 fi

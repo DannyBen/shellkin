@@ -38,6 +38,7 @@ teardown() {
   feature_line_parse ""
 
   [ "$FEATURE_LINE_KIND" = "blank" ]
+}
 
 @test "feature_line_parse classifies comment lines" {
   feature_line_parse "# comment"

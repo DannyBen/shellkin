@@ -38,7 +38,7 @@ teardown() {
 
 @test "feature_scenario_run executes background and scenario steps in order" {
   stepdef_parse "@Given I am in a temp directory"
-  stepdef_register 'mkdir -p "$TEST_ROOT/tmp"; cd "$TEST_ROOT/tmp"'
+  stepdef_register 'TEMP_DIR=$(mktemp -d); cd "$TEMP_DIR"'
   stepdef_parse "@When I run '{command}'"
   stepdef_register 'run "$command"'
   stepdef_parse "@Then the file '{path}' should exist"
@@ -49,14 +49,14 @@ teardown() {
 
   feature_scenario_run background_steps scenario_steps
 
-  [ -f "$TEST_ROOT/tmp/somefile" ]
+  [ -f "$TEMP_DIR/somefile" ]
 }
 
 @test "feature_run executes a scenario using loaded step definitions" {
   write_file stepdefs.sh <<'EOF'
 @Given I am in a temp directory
-mkdir -p tmp
-cd tmp
+TEMP_DIR=$(mktemp -d)
+cd "$TEMP_DIR"
 
 @When I run '{command}'
 run "$command"
@@ -79,15 +79,17 @@ EOF
   feature_run "$TEST_ROOT/test.feature"
 
   [ "$FEATURE_NAME" = "Create a file" ]
-  [ -f "$TEST_ROOT/tmp/somefile" ]
+  [ -f "$TEMP_DIR/somefile" ]
   [ "$LAST_EXIT_CODE" -eq 0 ]
 }
 
 @test "feature_run executes background steps before each scenario" {
   write_file stepdefs.sh <<'EOF'
 @Given I am in a temp directory
-mkdir -p "$TEST_ROOT/tmp"
-cd "$TEST_ROOT/tmp"
+if [[ -z "${TEMP_DIR:-}" ]]; then
+  TEMP_DIR=$(mktemp -d)
+fi
+cd "$TEMP_DIR"
 
 @When I run '{command}'
 run "$command"
@@ -114,8 +116,8 @@ EOF
   stepdefs_file_parse "$TEST_ROOT/stepdefs.sh"
   feature_run "$TEST_ROOT/test.feature"
 
-  [ -f "$TEST_ROOT/tmp/first-file" ]
-  [ -f "$TEST_ROOT/tmp/second-file" ]
+  [ -f "$TEMP_DIR/first-file" ]
+  [ -f "$TEMP_DIR/second-file" ]
 }
 
 @test "feature_run returns non-zero when And is the first step" {
