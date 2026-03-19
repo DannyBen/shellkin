@@ -5,7 +5,7 @@ load ../../test_helper.bash
 setup() {
   setup_test_environment
   eval "$(declare -f run | sed '1s/^run /bats_run /')"
-  source_libs core/trim syntax/pattern syntax/stepdef syntax/feature file/stepdefs runtime/run runtime/step file/feature
+  source_libs core/trim syntax/pattern syntax/stepdef syntax/feature file/stepdefs user_helpers/run runtime/step output/test file/feature
 
   STEPDEF_TYPES=()
   STEPDEF_PATTERNS=()
@@ -22,7 +22,7 @@ setup() {
 }
 
 teardown() {
-  unset_functions trim _pattern_escape_literal pattern_regex pattern_tokens stepdef_type_valid stepdef_parse stepdef_register stepdefs_file_parse run step_run feature_line_parse feature_step_type_resolve feature_run feature_recorded_step_run feature_scenario_run
+  unset_functions trim _pattern_escape_literal pattern_regex pattern_tokens stepdef_type_valid stepdef_parse stepdef_register stepdefs_file_parse run step_run output_feature_start output_scenario_start output_step_result feature_line_parse feature_step_type_resolve feature_run feature_recorded_step_run feature_scenario_run
   teardown_test_environment
 }
 
@@ -47,7 +47,7 @@ teardown() {
   background_steps=($'Given\tI am in a temp directory')
   scenario_steps=($'When\tI run '\''touch somefile'\''' $'Then\tthe file '\''somefile'\'' should exist')
 
-  feature_scenario_run background_steps scenario_steps
+  feature_scenario_run "Example" background_steps scenario_steps
 
   [ -f "$TEMP_DIR/somefile" ]
 }
@@ -76,11 +76,14 @@ Scenario: Touch a file
 EOF
 
   stepdefs_file_parse "$TEST_ROOT/stepdefs.sh"
-  feature_run "$TEST_ROOT/test.feature"
+  feature_run "$TEST_ROOT/test.feature" >"$TEST_ROOT/output.txt"
 
   [ "$FEATURE_NAME" = "Create a file" ]
   [ -f "$TEMP_DIR/somefile" ]
   [ "$LAST_EXIT_CODE" -eq 0 ]
+  output=$(<"$TEST_ROOT/output.txt")
+  assert_output_contains "Feature: Create a file"
+  assert_output_contains "Scenario: Touch a file"
 }
 
 @test "feature_run executes background steps before each scenario" {
@@ -114,7 +117,7 @@ Scenario: Second
 EOF
 
   stepdefs_file_parse "$TEST_ROOT/stepdefs.sh"
-  feature_run "$TEST_ROOT/test.feature"
+  feature_run "$TEST_ROOT/test.feature" >"$TEST_ROOT/output.txt"
 
   [ -f "$TEMP_DIR/first-file" ]
   [ -f "$TEMP_DIR/second-file" ]

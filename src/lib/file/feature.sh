@@ -25,6 +25,7 @@ feature_run() {
         section=feature
         in_description=1
         FEATURE_NAME=$FEATURE_LINE_NAME
+        output_feature_start "$FEATURE_NAME"
         continue
         ;;
       background)
@@ -42,11 +43,12 @@ feature_run() {
           break
         fi
         if ((scenario_seen != 0)); then
-          feature_scenario_run background_steps scenario_steps || failed=1
+          feature_scenario_run "$FEATURE_SCENARIO_NAME" background_steps scenario_steps || failed=1
         fi
         scenario_seen=1
         section=scenario
         in_description=0
+        FEATURE_SCENARIO_NAME=$FEATURE_LINE_NAME
         scenario_steps=()
         continue
         ;;
@@ -75,9 +77,9 @@ feature_run() {
   done < "$feature_file"
 
   if ((failed == 0 && scenario_seen != 0)); then
-    feature_scenario_run background_steps scenario_steps || failed=1
+    feature_scenario_run "$FEATURE_SCENARIO_NAME" background_steps scenario_steps || failed=1
   elif ((scenario_seen != 0)); then
-    feature_scenario_run background_steps scenario_steps || failed=1
+    feature_scenario_run "$FEATURE_SCENARIO_NAME" background_steps scenario_steps || failed=1
   fi
 
   set -e
@@ -90,20 +92,26 @@ feature_recorded_step_run() {
   local step_keyword=${recorded%%$'\t'*}
   local step_text=${recorded#*$'\t'}
   local resolved_type
+  local status
 
   resolved_type=$(feature_step_type_resolve "$previous_type" "$step_keyword") || return 1
   FEATURE_PREVIOUS_STEP_TYPE=$resolved_type
 
   step_run "$resolved_type" "$step_text"
+  status=$?
+  output_step_result "$status" "$step_keyword" "$step_text"
+  return "$status"
 }
 
 feature_scenario_run() {
-  local -n background_steps_ref=$1
-  local -n scenario_steps_ref=$2
+  local scenario_name=$1
+  local -n background_steps_ref=$2
+  local -n scenario_steps_ref=$3
   local step
   local scenario_failed=0
 
   FEATURE_PREVIOUS_STEP_TYPE=
+  output_scenario_start "$scenario_name"
 
   set +e
   for step in "${background_steps_ref[@]}"; do

@@ -4,7 +4,7 @@ load ../../test_helper.bash
 
 setup() {
   setup_test_environment
-  source_libs runtime/run
+  source_libs user_helpers/run
 
   LAST_EXIT_CODE=
   LAST_STDOUT=

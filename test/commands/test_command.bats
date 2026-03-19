@@ -26,13 +26,18 @@ TEMP_DIR=$(mktemp -d)
 cd "$TEMP_DIR"
 
 @When I run '{command}'
-run "$command"
+PATH="$SHELLKIN_ROOT:$PATH" run "$command"
 
 @Then the file '{path}' should exist
 [[ -f "$path" ]]
+
+@Then the output should include '{text}'
+[[ "$LAST_STDOUT" == *"$text"* ]]
 EOF
 
   run "$SHELLKIN_REPO_ROOT/shellkin" test "$TEST_ROOT/features"
 
   [ "$status" -eq 0 ]
+  assert_output_contains "Feature: Create a file"
+  assert_output_contains "Scenario: Touch a file"
 }
