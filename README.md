@@ -25,6 +25,31 @@ run "$command"
 [[ "$LAST_STDOUT" == *"$text"* ]]
 ```
 
+## Install
+
+### Installing using the setup script
+
+This setup script will download the latest shellkin release executable to
+`/usr/local/bin/`.
+
+```shell
+$ curl -Ls get.dannyb.co/shellkin/setup | bash
+```
+
+Feel free to inspect the [setup script](setup) before running.
+
+
+### Installing manually
+
+Download the `shellkin` bash script, place it in your path and make it
+executable.
+
+```console
+# download the latest release and place it in /usr/local/bin
+wget https://github.com/DannyBen/shellkin/releases/latest/download/shellkin
+sudo install -m 0755 shellkin /usr/local/bin/
+```
+
 ## Status
 
 Shellkin is currently usable for local feature testing and dogfoods itself
@@ -59,7 +84,7 @@ Run a single feature file:
 shellkin test path/to/features/example.feature
 ```
 
-## Project Layout
+## Features Directory Layout
 
 Shellkin expects this structure:
 
@@ -73,17 +98,17 @@ features/
 - Feature files live in the target directory.
 - Step definitions live in `step_definitions/` under that same directory.
 
-## Development
+## Uninstalling
 
-This is a Bashly project.
+If you used the setup script, you can run this uninstall script:
 
-Regenerate the CLI with:
-
-```bash
-bashly generate
+```shell
+$ curl -Ls get.dannyb.co/shellkin/uninstall | bash
 ```
 
-The repository includes Bats tests for the library layers and command-level
-behavior.
+## Contributing / Support
 
-See [op.conf](op.conf) for additional development commands.
+If you experience any issue, have a question or a suggestion, or if you wish
+to contribute, feel free to [open an issue][issues].
+
+[issues]: https://github.com/DannyBen/shellkin/issues
