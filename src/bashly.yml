@@ -1,6 +1,16 @@
 name: shellkin
-help: BDD Test Framework for Bash Scripts
+help: Gherkin-style BDD Test Framework for Bash Scripts
 version: 0.1.0
+
+x_mandoc_authors: Danny Ben Shitrit <https://github.com/dannyben>
+x_mandoc_footer: |-
+  # SOURCE CODE
+
+  https://github.com/dannyben/shellkin
+
+  # ISSUE TRACKER
+  
+  https://github.com/dannyben/shellkin/issues
 
 commands:
 - name: test

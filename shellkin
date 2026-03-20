@@ -17,7 +17,7 @@ version_command() {
 
 # :command.usage
 shellkin_usage() {
-  printf "shellkin - BDD Test Framework for Bash Scripts\n\n"
+  printf "shellkin - Gherkin-style BDD Test Framework for Bash Scripts\n\n"
 
   printf "%s\n" "$(bold "Usage:")"
   printf "  shellkin COMMAND\n"
