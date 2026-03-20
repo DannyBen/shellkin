@@ -902,11 +902,15 @@ output_validate_summary() {
   local total_files=$1
   local failed_files=$2
   local passed_files=$((total_files - failed_files))
-  local label=files
+  local label
 
-  if ((total_files == 1)); then
-    label=file
-  fi
+  label=$(
+    if ((total_files == 1)); then
+      printf '%s' "file"
+    else
+      printf '%s' "files"
+    fi
+  )
 
   if ((failed_files == 0)); then
     green_bold "\nvalidation passed: $total_files $label checked"
