@@ -28,7 +28,7 @@ TARGET
 
 Path to features directory or a single feature file
 
-- Default Value: **features**
+- Default Value: **$SHELLKIN_FEATURES_ROOT**
 
 SEE ALSO
 ==================================================

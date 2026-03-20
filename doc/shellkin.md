@@ -27,10 +27,27 @@ shellkin test
 Run feature tests
 
 
+ENVIRONMENT VARIABLES
+==================================================
+
+SHELLKIN_FEATURES_ROOT
+--------------------------------------------------
+
+Path to features directory (relative to working directory)
+
+- Default Value: **features**
+
+SHELLKIN_STEPDEFS_ROOT
+--------------------------------------------------
+
+Path to step definitions directory (relative to features root)
+
+- Default Value: **step_definitions**
+
 SEE ALSO
 ==================================================
 
-**shellkin-test**(1)
+**shellkin-test**(1), **shellkin-stepdefs**(5), **shellkin-feature**(5)
 
 # SOURCE CODE
 
