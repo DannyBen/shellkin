@@ -1,5 +1,5 @@
 Feature: two
-  Failing fixture
+  Single-file failing acceptance case
 
 Scenario: two fails
   When I run 'printf two'
