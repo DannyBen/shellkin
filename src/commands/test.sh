@@ -12,13 +12,13 @@ TEST_SCENARIOS_FAILED=0
 
 if [[ -f $target ]]; then
   features_dir="$(dirname "$target")"
-  stepdefs_dir="$features_dir/step_definitions"
   feature_files=("$target")
 else
   features_dir="$target"
-  stepdefs_dir="$features_dir/step_definitions"
   readarray -t feature_files < <(find "$features_dir" -maxdepth 1 -type f -name '*.feature' | sort)
 fi
+
+stepdefs_dir="$features_dir/$SHELLKIN_STEPDEFS_ROOT"
 
 readarray -t stepdef_files < <(find "$stepdefs_dir" -maxdepth 1 -type f \( -name '*.sh' -o -name '*.bash' \) | sort)
 

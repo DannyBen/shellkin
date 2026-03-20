@@ -42,6 +42,21 @@ shellkin_usage() {
     printf "    Show version number\n"
     echo
 
+    # :command.usage_environment_variables
+    printf "%s\n" "$(bold "Environment Variables:")"
+
+    # :environment_variable.usage
+    printf "  %s\n" "$(green "SHELLKIN_FEATURES_ROOT")"
+    printf "    Path to features directory (relative to working directory)\n"
+    printf "    %s\n" "Default: features"
+    echo
+
+    # :environment_variable.usage
+    printf "  %s\n" "$(green "SHELLKIN_STEPDEFS_ROOT")"
+    printf "    Path to step definitions directory (relative to features root)\n"
+    printf "    %s\n" "Default: step_definitions"
+    echo
+
   fi
 }
 
@@ -72,7 +87,7 @@ shellkin_test_usage() {
     # :argument.usage
     printf "  %s\n" "$(green "TARGET")"
     printf "    Path to features directory or a single feature file\n"
-    printf "    %s\n" "Default: features"
+    printf "    %s\n" "Default: $SHELLKIN_FEATURES_ROOT"
     echo
 
   fi
@@ -766,14 +781,18 @@ run() {
 
 # src/lib/validations/validate_test_target.sh
 validate_test_target() {
+  local features_dir
+  local stepdefs_root=${SHELLKIN_STEPDEFS_ROOT:-step_definitions}
+
   if [[ -f "$1" ]]; then
+    features_dir=$(dirname "$1")
     [[ $1 == *.feature ]] || echo "$1 must be a .feature file"
-    [[ -d "$(dirname "$1")/step_definitions" ]] || echo "$(dirname "$1")/step_definitions must be a directory"
+    [[ -d "$features_dir/$stepdefs_root" ]] || echo "$features_dir/$stepdefs_root must be a directory"
     return 0
   fi
 
   [[ -d "$1" ]] || echo "$1 must be a directory"
-  [[ -d "$1/step_definitions" ]] || echo "$1/step_definitions must be a directory"
+  [[ -d "$1/$stepdefs_root" ]] || echo "$1/$stepdefs_root must be a directory"
 }
 
 # :command.command_functions
@@ -795,13 +814,13 @@ shellkin_test_command() {
 
   if [[ -f $target ]]; then
     features_dir="$(dirname "$target")"
-    stepdefs_dir="$features_dir/step_definitions"
     feature_files=("$target")
   else
     features_dir="$target"
-    stepdefs_dir="$features_dir/step_definitions"
     readarray -t feature_files < <(find "$features_dir" -maxdepth 1 -type f -name '*.feature' | sort)
   fi
+
+  stepdefs_dir="$features_dir/$SHELLKIN_STEPDEFS_ROOT"
 
   readarray -t stepdef_files < <(find "$stepdefs_dir" -maxdepth 1 -type f \( -name '*.sh' -o -name '*.bash' \) | sort)
 
@@ -844,6 +863,11 @@ parse_requirements() {
 
     esac
   done
+
+  # :command.environment_variables_filter
+  # :command.environment_variables_default
+  export SHELLKIN_FEATURES_ROOT="${SHELLKIN_FEATURES_ROOT:-features}"
+  export SHELLKIN_STEPDEFS_ROOT="${SHELLKIN_STEPDEFS_ROOT:-step_definitions}"
 
   # :command.command_filter
   action=${1:-}
@@ -946,7 +970,7 @@ shellkin_test_parse_requirements() {
   done
 
   # :command.default_assignments
-  [[ -n ${args['target']:-} ]] || args['target']="features"
+  [[ -n ${args['target']:-} ]] || args['target']="$SHELLKIN_FEATURES_ROOT"
 
   # :command.validations
   # :argument.validations
@@ -964,6 +988,10 @@ shellkin_test_parse_requirements() {
 initialize() {
   declare -g version="0.1.0"
   set -eo pipefail
+
+  # :command.environment_variables_default
+  export SHELLKIN_FEATURES_ROOT="${SHELLKIN_FEATURES_ROOT:-features}"
+  export SHELLKIN_STEPDEFS_ROOT="${SHELLKIN_STEPDEFS_ROOT:-step_definitions}"
 
 }
 

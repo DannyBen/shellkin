@@ -12,6 +12,14 @@ x_mandoc_footer: |-
   
   https://github.com/dannyben/shellkin/issues
 
+environment_variables:
+  - name: shellkin_features_root
+    help: Path to features directory (relative to working directory)
+    default: features
+  - name: shellkin_stepdefs_root
+    help: Path to step definitions directory (relative to features root)
+    default: step_definitions
+
 commands:
 - name: test
   alias: t
@@ -20,6 +28,6 @@ commands:
 
   args:
   - name: target
-    default: features
+    default: "$SHELLKIN_FEATURES_ROOT"
     help: Path to features directory or a single feature file
     validate: [test_target]

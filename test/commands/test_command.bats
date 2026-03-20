@@ -42,3 +42,32 @@ EOF
   assert_output_contains "Scenario: Touch a file"
   assert_output_contains "1 scenario, 0 failing"
 }
+
+@test "shellkin test uses SHELLKIN_STEPDEFS_ROOT relative to the features root" {
+  write_file custom_features/sample.feature <<'EOF'
+Feature: Create a file
+
+Scenario: Touch a file
+  Given I am in a temp directory
+  When I run 'touch somefile'
+  Then the file 'somefile' should exist
+EOF
+
+  write_file custom_features/steps/core.sh <<'EOF'
+@Given I am in a temp directory
+TEMP_DIR=$(mktemp -d)
+cd "$TEMP_DIR"
+
+@When I run '{command}'
+run "$command"
+
+@Then the file '{path}' should exist
+[[ -f "$path" ]]
+EOF
+
+  run env SHELLKIN_STEPDEFS_ROOT=steps "$SHELLKIN_REPO_ROOT/shellkin" test "$TEST_ROOT/custom_features"
+
+  [ "$status" -eq 0 ]
+  assert_output_contains "Feature: Create a file"
+  assert_output_contains "1 scenario, 0 failing"
+}
