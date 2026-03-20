@@ -14,7 +14,6 @@ setup() {
 }
 
 teardown() {
-  unset_functions _pattern_escape_literal pattern_regex pattern_tokens stepdef_type_valid stepdef_parse stepdef_register
   teardown_test_environment
 }
 

@@ -10,7 +10,6 @@ setup() {
 }
 
 teardown() {
-  unset_functions fail
   teardown_test_environment
 }
 

@@ -30,6 +30,10 @@ assert_output_contains() {
   [[ "${output-}" == *"$expected"* ]]
 }
 
+strip_ansi() {
+  sed -E $'s/\x1B\\[[0-9;]*m//g'
+}
+
 fixture_path() {
   printf '%s/test/fixtures/%s\n' "$SHELLKIN_REPO_ROOT" "$1"
 }

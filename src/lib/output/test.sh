@@ -6,6 +6,36 @@ output_scenario_start() {
   bold "\nScenario: $1"
 }
 
+output_failure_label() {
+  local label=$1
+
+  if [[ "${NO_COLOR:-}" == "" ]]; then
+    printf '    \e[1m%s\e[0m' "$label"
+  else
+    printf '    %s' "$label"
+  fi
+}
+
+output_failure_block() {
+  local label=$1
+  local value=$2
+  local line
+
+  [[ -n $value ]] || return 0
+
+  if [[ $value != *$'\n'* ]]; then
+    output_failure_label "$label"
+    printf ': %s\n' "$value"
+    return 0
+  fi
+
+  output_failure_label "$label"
+  printf ':\n'
+  while IFS= read -r line || [[ -n $line ]]; do
+    printf '      %s\n' "$line"
+  done <<<"$value"
+}
+
 output_step_result() {
   local status=$1
   local type=$2
@@ -17,6 +47,11 @@ output_step_result() {
     symbol='✗'
     line="  $symbol $type $text"
     red "$line"
+    output_failure_block "FAIL_MESSAGE" "${FAIL_MESSAGE:-}"
+    output_failure_block "LAST_EXIT_CODE" "${LAST_EXIT_CODE:-}"
+    output_failure_block "LAST_STDOUT" "${LAST_STDOUT:-}"
+    output_failure_block "LAST_STDERR" "${LAST_STDERR:-}"
+    output_failure_block "DOC_STRING" "${DOC_STRING:-}"
     return 0
   fi
 

@@ -8,7 +8,6 @@ setup() {
 }
 
 teardown() {
-  unset_functions trim feature_line_parse feature_step_type_resolve
   teardown_test_environment
 }
 

@@ -5,13 +5,14 @@ load ../../test_helper.bash
 setup() {
   setup_test_environment
   eval "$(declare -f run | sed '1s/^run /bats_run /')"
-  source_libs core/colors core/trim syntax/pattern syntax/stepdef syntax/feature file/stepdefs user_helpers/run runtime/step output/test file/feature
+  source_libs core/colors core/trim syntax/pattern syntax/stepdef syntax/feature file/stepdefs user_helpers/run user_helpers/fail runtime/step output/test file/feature
 
   STEPDEF_TYPES=()
   STEPDEF_PATTERNS=()
   STEPDEF_REGEXES=()
   STEPDEF_TOKENS_LIST=()
   STEPDEF_BODIES=()
+  FAIL_MESSAGE=
   LAST_EXIT_CODE=
   LAST_STDOUT=
   LAST_STDERR=
@@ -24,7 +25,6 @@ setup() {
 }
 
 teardown() {
-  unset_functions enable_auto_colors print_in_color red green yellow blue magenta cyan black white bold underlined bold_underlined red_bold green_bold yellow_bold blue_bold magenta_bold cyan_bold black_bold white_bold red_underlined green_underlined yellow_underlined blue_underlined magenta_underlined cyan_underlined black_underlined white_underlined trim _pattern_escape_literal pattern_regex pattern_tokens stepdef_type_valid stepdef_parse stepdef_register stepdefs_file_parse run step_run output_feature_start output_scenario_start output_step_result output_summary feature_line_parse feature_step_type_resolve feature_run feature_recorded_step_run feature_scenario_run feature_doc_string_apply
   teardown_test_environment
 }
 
@@ -154,4 +154,40 @@ EOF
   feature_recorded_step_run $'Then\tthe output should match\tfirst line\nsecond line' ""
 
   [ "$(cat "$TEST_ROOT/doc_string.txt")" = $'first line\nsecond line' ]
+}
+
+@test "feature_run prints failure context for failed steps" {
+  write_file stepdefs.sh <<'EOF'
+@When I run '{command}'
+run "$command"
+
+@Then the command should fail with a message
+fail "invalid output detected"
+EOF
+
+  write_file test.feature <<'EOF'
+Feature: Failure output
+
+Scenario: Show context
+  When I run 'printf hello; printf boom >&2; exit 7'
+  Then the command should fail with a message
+EOF
+
+  stepdefs_file_parse "$TEST_ROOT/stepdefs.sh"
+  if feature_run "$TEST_ROOT/test.feature" >"$TEST_ROOT/output.txt"; then
+    status=0
+  else
+    status=$?
+  fi
+
+  [ "$status" -eq 1 ]
+  output=$(strip_ansi <"$TEST_ROOT/output.txt")
+  assert_output_contains "FAIL_MESSAGE:"
+  assert_output_contains "invalid output detected"
+  assert_output_contains "LAST_EXIT_CODE:"
+  assert_output_contains "7"
+  assert_output_contains "LAST_STDOUT:"
+  assert_output_contains "hello"
+  assert_output_contains "LAST_STDERR:"
+  assert_output_contains "boom"
 }

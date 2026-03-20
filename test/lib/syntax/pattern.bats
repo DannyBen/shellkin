@@ -8,7 +8,6 @@ setup() {
 }
 
 teardown() {
-  unset_functions _pattern_escape_literal pattern_regex pattern_tokens
   teardown_test_environment
 }
 

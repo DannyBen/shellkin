@@ -8,7 +8,6 @@ setup() {
 }
 
 teardown() {
-  unset_functions trim
   teardown_test_environment
 }
 
