@@ -30,7 +30,8 @@ commands:
   help: Run feature tests
 
   args:
-  - name: target
+  - &args_target
+    name: target
     default: "$SHELLKIN_FEATURES_ROOT"
     help: Path to features directory or a single feature file
     validate: [test_target]
@@ -39,3 +40,8 @@ commands:
   - long: --fail-fast
     short: -f
     help: Abort after the first failing scenario
+
+- name: validate
+  alias: v
+  help: Validate feature files and step definition files
+  args: [*args_target]

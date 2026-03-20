@@ -1,3 +1,21 @@
+step_match() {
+  local type=$1
+  local text=$2
+  local i
+  local step_type
+
+  for i in "${!STEPDEF_TYPES[@]}"; do
+    step_type=${STEPDEF_TYPES[$i]}
+    [[ $step_type == "$type" ]] || continue
+
+    if [[ $text =~ ${STEPDEF_REGEXES[$i]} ]]; then
+      return 0
+    fi
+  done
+
+  return 1
+}
+
 step_run() {
   local type=$1
   local text=$2

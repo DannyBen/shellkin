@@ -90,6 +90,9 @@ Implemented pieces include:
 # Run all repo features:
 shellkin test
 
+# Validate feature and step definition files without executing steps:
+shellkin validate
+
 # Stop after the first failing scenario:
 shellkin test --fail-fast
 
@@ -102,6 +105,9 @@ shellkin test path/to/features/example.feature
 
 When a step fails, the remaining steps in that scenario are marked as skipped
 and are not executed.
+
+Use `shellkin validate` to check feature structure and step-definition matching
+without running any step bodies.
 
 ## Features Directory Layout
 

@@ -4,7 +4,7 @@ Feature: test
 Scenario: Running all feature tests
   When I run 'shellkin test features/fixtures/features'
   Then the output should include 'Feature: one'
-  And the output should include '3 scenarios, 0 failing'
+   And the output should include '3 scenarios, 0 failing'
    And the exit code should mean success
 
 Scenario: Running a failing test
@@ -48,4 +48,15 @@ Scenario: Printing doc string context for a failing step
   Then the output should include 'Feature: failing doc string'
   And the output should include 'goodbye'
   And the output should include '1 scenario, 0 passing, 1 failing'
+  And the exit code should mean failure
+
+Scenario: Validating a runtime-failing feature without executing it
+  When I run 'shellkin validate features/fixtures/selective/failing.feature'
+  Then the output should include 'file: failing.feature'
+  And the output should include '✓ feature'
+  And the exit code should mean success
+
+Scenario: Failing validation on an unmatched step
+  When I run 'shellkin validate features/fixtures/selective/missing_stepdef.feature'
+  Then the output should include 'line 6: no matching step definition'
   And the exit code should mean failure

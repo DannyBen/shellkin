@@ -26,6 +26,11 @@ shellkin test
 
 Run feature tests
 
+shellkin validate
+--------------------------------------------------
+
+Validate feature files and step definition files
+
 
 ENVIRONMENT VARIABLES
 ==================================================
@@ -47,7 +52,7 @@ Path to step definitions directory (relative to features root)
 SEE ALSO
 ==================================================
 
-**shellkin-test**(1), **shellkin-stepdefs**(5), **shellkin-feature**(5)
+**shellkin-test**(1), **shellkin-validate**(1), **shellkin-stepdefs**(5), **shellkin-feature**(5)
 
 # SOURCE CODE
 

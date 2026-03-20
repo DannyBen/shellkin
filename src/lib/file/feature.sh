@@ -149,6 +149,18 @@ feature_recorded_step_parse() {
   fi
 }
 
+feature_recorded_step_validate() {
+  local recorded=$1
+  local previous_type=$2
+  local resolved_type
+
+  feature_recorded_step_parse "$recorded"
+
+  resolved_type=$(feature_step_type_resolve "$previous_type" "$FEATURE_RECORDED_STEP_KEYWORD") || return 1
+  FEATURE_PREVIOUS_STEP_TYPE=$resolved_type
+  step_match "$resolved_type" "$FEATURE_RECORDED_STEP_TEXT"
+}
+
 feature_recorded_step_run() {
   local recorded=$1
   local previous_type=$2
@@ -168,6 +180,198 @@ feature_recorded_step_run() {
   status=$?
   output_step_result "$status" "$FEATURE_RECORDED_STEP_KEYWORD" "$FEATURE_RECORDED_STEP_TEXT"
   return "$status"
+}
+
+feature_validation_set_error() {
+  local line_number=$1
+  local message=$2
+  local context_line=${3:-}
+
+  FEATURE_VALIDATION_LINE=$line_number
+  FEATURE_VALIDATION_MESSAGE=$message
+  FEATURE_VALIDATION_CONTEXT=$context_line
+}
+
+feature_scenario_validate() {
+  local -n background_steps_ref=$1
+  local -n background_lines_ref=$2
+  local -n scenario_steps_ref=$3
+  local -n scenario_lines_ref=$4
+  local step
+  local index
+
+  FEATURE_PREVIOUS_STEP_TYPE=
+
+  for index in "${!background_steps_ref[@]}"; do
+    step=${background_steps_ref[$index]}
+    if feature_recorded_step_validate "$step" "$FEATURE_PREVIOUS_STEP_TYPE"; then
+      :
+    else
+      feature_recorded_step_parse "$step"
+      feature_validation_set_error "${background_lines_ref[$index]}" "no matching step definition for" "$FEATURE_RECORDED_STEP_KEYWORD $FEATURE_RECORDED_STEP_TEXT"
+      return 1
+    fi
+  done
+
+  for index in "${!scenario_steps_ref[@]}"; do
+    step=${scenario_steps_ref[$index]}
+    if feature_recorded_step_validate "$step" "$FEATURE_PREVIOUS_STEP_TYPE"; then
+      :
+    else
+      feature_recorded_step_parse "$step"
+      feature_validation_set_error "${scenario_lines_ref[$index]}" "no matching step definition for" "$FEATURE_RECORDED_STEP_KEYWORD $FEATURE_RECORDED_STEP_TEXT"
+      return 1
+    fi
+  done
+}
+
+feature_validate() {
+  local feature_file=$1
+  local line
+  local line_number=0
+  local section=
+  local feature_seen=0
+  local scenario_seen=0
+  local in_description=0
+  local in_doc_string=0
+  local failed=0
+  local doc_string_indent=
+  local doc_string_content=
+  local doc_string_line=
+  local doc_string_start_line=0
+  local -a background_steps=()
+  local -a background_step_lines=()
+  local -a scenario_steps=()
+  local -a scenario_step_lines=()
+
+  FEATURE_NAME=
+  FEATURE_VALIDATION_LINE=
+  FEATURE_VALIDATION_MESSAGE=
+  FEATURE_VALIDATION_CONTEXT=
+
+  set +e
+
+  while IFS= read -r line || [[ -n $line ]]; do
+    ((line_number += 1))
+
+    if ((in_doc_string != 0)); then
+      if [[ $(trim "$line") == '"""' ]]; then
+        if feature_doc_string_apply "$doc_string_content" "$section" background_steps scenario_steps; then
+          :
+        else
+          feature_validation_set_error "$doc_string_start_line" "doc string must follow a step" '"""'
+          failed=1
+          break
+        fi
+
+        in_doc_string=0
+        doc_string_indent=
+        doc_string_content=
+        doc_string_start_line=0
+        continue
+      fi
+
+      doc_string_line=$line
+      if [[ -n $doc_string_indent && $doc_string_line == "$doc_string_indent"* ]]; then
+        doc_string_line=${doc_string_line#"$doc_string_indent"}
+      fi
+
+      if [[ -n $doc_string_content ]]; then
+        doc_string_content+=$'\n'
+      fi
+      doc_string_content+=$doc_string_line
+      continue
+    fi
+
+    feature_line_parse "$line"
+
+    case $FEATURE_LINE_KIND in
+      blank | comment)
+        continue
+        ;;
+      feature)
+        feature_seen=1
+        section=feature
+        in_description=1
+        FEATURE_NAME=$FEATURE_LINE_NAME
+        continue
+        ;;
+      background)
+        if ((feature_seen == 0 || scenario_seen != 0)); then
+          feature_validation_set_error "$line_number" "Background must appear after Feature and before the first Scenario" "$(trim "$line")"
+          failed=1
+          break
+        fi
+        section=background
+        in_description=0
+        continue
+        ;;
+      scenario)
+        if ((feature_seen == 0)); then
+          feature_validation_set_error "$line_number" "Scenario must appear after Feature" "$(trim "$line")"
+          failed=1
+          break
+        fi
+        if ((scenario_seen != 0)); then
+          feature_scenario_validate background_steps background_step_lines scenario_steps scenario_step_lines || failed=1
+          ((failed == 0)) || break
+        fi
+        scenario_seen=1
+        section=scenario
+        in_description=0
+        FEATURE_SCENARIO_NAME=$FEATURE_LINE_NAME
+        scenario_steps=()
+        scenario_step_lines=()
+        continue
+        ;;
+      step)
+        in_description=0
+        case $section in
+          background)
+            background_steps+=("$FEATURE_STEP_TYPE"$'\t'"$FEATURE_STEP_TEXT")
+            background_step_lines+=("$line_number")
+            ;;
+          scenario)
+            scenario_steps+=("$FEATURE_STEP_TYPE"$'\t'"$FEATURE_STEP_TEXT")
+            scenario_step_lines+=("$line_number")
+            ;;
+          *)
+            feature_validation_set_error "$line_number" "step must appear inside Background or Scenario" "$(trim "$line")"
+            failed=1
+            ;;
+        esac
+        continue
+        ;;
+      doc_string_fence)
+        doc_string_indent=${line%%\"\"\"*}
+        in_doc_string=1
+        doc_string_content=
+        doc_string_start_line=$line_number
+        continue
+        ;;
+      other)
+        if [[ $section == feature && $in_description == 1 ]]; then
+          continue
+        fi
+        feature_validation_set_error "$line_number" "invalid feature syntax" "$FEATURE_LINE_NAME"
+        failed=1
+        ;;
+    esac
+
+    ((failed == 0)) || break
+  done <"$feature_file"
+
+  if ((failed == 0 && in_doc_string != 0)); then
+    feature_validation_set_error "$doc_string_start_line" "unterminated doc string" '"""'
+    failed=1
+  fi
+
+  if ((failed == 0 && scenario_seen != 0)); then
+    feature_scenario_validate background_steps background_step_lines scenario_steps scenario_step_lines || failed=1
+  fi
+
+  set -e
+  return "$failed"
 }
 
 feature_scenario_run() {

@@ -26,7 +26,8 @@ shellkin_usage() {
   echo
   # :command.usage_commands
   printf "%s\n" "$(bold "Commands:")"
-  printf "  %s   Run feature tests (default)\n" "$(green "test")"
+  printf "  %s   Run feature tests (default)\n" "$(green "test")    "
+  printf "  %s   Validate feature files and step definition files\n" "$(green "validate")"
   echo
 
   # :command.long_usage
@@ -81,6 +82,39 @@ shellkin_test_usage() {
     printf "  %s\n" "$(green "--fail-fast, -f")"
     printf "    Abort after the first failing scenario\n"
     echo
+
+    # :command.usage_fixed_flags
+    printf "  %s\n" "$(green "--help, -h")"
+    printf "    Show this help\n"
+    echo
+
+    # :command.usage_args
+    printf "%s\n" "$(bold "Arguments:")"
+
+    # :argument.usage
+    printf "  %s\n" "$(green "TARGET")"
+    printf "    Path to features directory or a single feature file\n"
+    printf "    %s\n" "Default: $SHELLKIN_FEATURES_ROOT"
+    echo
+
+  fi
+}
+
+# :command.usage
+shellkin_validate_usage() {
+  printf "shellkin validate - Validate feature files and step definition files\n\n"
+  printf "Alias: v\n"
+  echo
+
+  printf "%s\n" "$(bold "Usage:")"
+  printf "  shellkin validate [TARGET]\n"
+  printf "  shellkin validate --help | -h\n"
+  echo
+
+  # :command.long_usage
+  if [[ -n "$long_usage" ]]; then
+    # :command.usage_options
+    printf "%s\n" "$(bold "Options:")"
 
     # :command.usage_fixed_flags
     printf "  %s\n" "$(green "--help, -h")"
@@ -358,6 +392,18 @@ feature_recorded_step_parse() {
   fi
 }
 
+feature_recorded_step_validate() {
+  local recorded=$1
+  local previous_type=$2
+  local resolved_type
+
+  feature_recorded_step_parse "$recorded"
+
+  resolved_type=$(feature_step_type_resolve "$previous_type" "$FEATURE_RECORDED_STEP_KEYWORD") || return 1
+  FEATURE_PREVIOUS_STEP_TYPE=$resolved_type
+  step_match "$resolved_type" "$FEATURE_RECORDED_STEP_TEXT"
+}
+
 feature_recorded_step_run() {
   local recorded=$1
   local previous_type=$2
@@ -377,6 +423,198 @@ feature_recorded_step_run() {
   status=$?
   output_step_result "$status" "$FEATURE_RECORDED_STEP_KEYWORD" "$FEATURE_RECORDED_STEP_TEXT"
   return "$status"
+}
+
+feature_validation_set_error() {
+  local line_number=$1
+  local message=$2
+  local context_line=${3:-}
+
+  FEATURE_VALIDATION_LINE=$line_number
+  FEATURE_VALIDATION_MESSAGE=$message
+  FEATURE_VALIDATION_CONTEXT=$context_line
+}
+
+feature_scenario_validate() {
+  local -n background_steps_ref=$1
+  local -n background_lines_ref=$2
+  local -n scenario_steps_ref=$3
+  local -n scenario_lines_ref=$4
+  local step
+  local index
+
+  FEATURE_PREVIOUS_STEP_TYPE=
+
+  for index in "${!background_steps_ref[@]}"; do
+    step=${background_steps_ref[$index]}
+    if feature_recorded_step_validate "$step" "$FEATURE_PREVIOUS_STEP_TYPE"; then
+      :
+    else
+      feature_recorded_step_parse "$step"
+      feature_validation_set_error "${background_lines_ref[$index]}" "no matching step definition for" "$FEATURE_RECORDED_STEP_KEYWORD $FEATURE_RECORDED_STEP_TEXT"
+      return 1
+    fi
+  done
+
+  for index in "${!scenario_steps_ref[@]}"; do
+    step=${scenario_steps_ref[$index]}
+    if feature_recorded_step_validate "$step" "$FEATURE_PREVIOUS_STEP_TYPE"; then
+      :
+    else
+      feature_recorded_step_parse "$step"
+      feature_validation_set_error "${scenario_lines_ref[$index]}" "no matching step definition for" "$FEATURE_RECORDED_STEP_KEYWORD $FEATURE_RECORDED_STEP_TEXT"
+      return 1
+    fi
+  done
+}
+
+feature_validate() {
+  local feature_file=$1
+  local line
+  local line_number=0
+  local section=
+  local feature_seen=0
+  local scenario_seen=0
+  local in_description=0
+  local in_doc_string=0
+  local failed=0
+  local doc_string_indent=
+  local doc_string_content=
+  local doc_string_line=
+  local doc_string_start_line=0
+  local -a background_steps=()
+  local -a background_step_lines=()
+  local -a scenario_steps=()
+  local -a scenario_step_lines=()
+
+  FEATURE_NAME=
+  FEATURE_VALIDATION_LINE=
+  FEATURE_VALIDATION_MESSAGE=
+  FEATURE_VALIDATION_CONTEXT=
+
+  set +e
+
+  while IFS= read -r line || [[ -n $line ]]; do
+    ((line_number += 1))
+
+    if ((in_doc_string != 0)); then
+      if [[ $(trim "$line") == '"""' ]]; then
+        if feature_doc_string_apply "$doc_string_content" "$section" background_steps scenario_steps; then
+          :
+        else
+          feature_validation_set_error "$doc_string_start_line" "doc string must follow a step" '"""'
+          failed=1
+          break
+        fi
+
+        in_doc_string=0
+        doc_string_indent=
+        doc_string_content=
+        doc_string_start_line=0
+        continue
+      fi
+
+      doc_string_line=$line
+      if [[ -n $doc_string_indent && $doc_string_line == "$doc_string_indent"* ]]; then
+        doc_string_line=${doc_string_line#"$doc_string_indent"}
+      fi
+
+      if [[ -n $doc_string_content ]]; then
+        doc_string_content+=$'\n'
+      fi
+      doc_string_content+=$doc_string_line
+      continue
+    fi
+
+    feature_line_parse "$line"
+
+    case $FEATURE_LINE_KIND in
+      blank | comment)
+        continue
+        ;;
+      feature)
+        feature_seen=1
+        section=feature
+        in_description=1
+        FEATURE_NAME=$FEATURE_LINE_NAME
+        continue
+        ;;
+      background)
+        if ((feature_seen == 0 || scenario_seen != 0)); then
+          feature_validation_set_error "$line_number" "Background must appear after Feature and before the first Scenario" "$(trim "$line")"
+          failed=1
+          break
+        fi
+        section=background
+        in_description=0
+        continue
+        ;;
+      scenario)
+        if ((feature_seen == 0)); then
+          feature_validation_set_error "$line_number" "Scenario must appear after Feature" "$(trim "$line")"
+          failed=1
+          break
+        fi
+        if ((scenario_seen != 0)); then
+          feature_scenario_validate background_steps background_step_lines scenario_steps scenario_step_lines || failed=1
+          ((failed == 0)) || break
+        fi
+        scenario_seen=1
+        section=scenario
+        in_description=0
+        FEATURE_SCENARIO_NAME=$FEATURE_LINE_NAME
+        scenario_steps=()
+        scenario_step_lines=()
+        continue
+        ;;
+      step)
+        in_description=0
+        case $section in
+          background)
+            background_steps+=("$FEATURE_STEP_TYPE"$'\t'"$FEATURE_STEP_TEXT")
+            background_step_lines+=("$line_number")
+            ;;
+          scenario)
+            scenario_steps+=("$FEATURE_STEP_TYPE"$'\t'"$FEATURE_STEP_TEXT")
+            scenario_step_lines+=("$line_number")
+            ;;
+          *)
+            feature_validation_set_error "$line_number" "step must appear inside Background or Scenario" "$(trim "$line")"
+            failed=1
+            ;;
+        esac
+        continue
+        ;;
+      doc_string_fence)
+        doc_string_indent=${line%%\"\"\"*}
+        in_doc_string=1
+        doc_string_content=
+        doc_string_start_line=$line_number
+        continue
+        ;;
+      other)
+        if [[ $section == feature && $in_description == 1 ]]; then
+          continue
+        fi
+        feature_validation_set_error "$line_number" "invalid feature syntax" "$FEATURE_LINE_NAME"
+        failed=1
+        ;;
+    esac
+
+    ((failed == 0)) || break
+  done <"$feature_file"
+
+  if ((failed == 0 && in_doc_string != 0)); then
+    feature_validation_set_error "$doc_string_start_line" "unterminated doc string" '"""'
+    failed=1
+  fi
+
+  if ((failed == 0 && scenario_seen != 0)); then
+    feature_scenario_validate background_steps background_step_lines scenario_steps scenario_step_lines || failed=1
+  fi
+
+  set -e
+  return "$failed"
 }
 
 feature_scenario_run() {
@@ -612,7 +850,91 @@ output_summary() {
   red_bold "\n$total_scenarios $label, $passed_scenarios passing, $failed_scenarios failing"
 }
 
+# src/lib/output/validate.sh
+validation_feature_relpath() {
+  local file=$1
+
+  if [[ $file == "$VALIDATION_FEATURES_DIR/"* ]]; then
+    printf '%s' "${file#"$VALIDATION_FEATURES_DIR"/}"
+  else
+    basename "$file"
+  fi
+}
+
+validation_stepdef_relpath() {
+  local file=$1
+
+  if [[ $file == "$VALIDATION_STEPDEFS_DIR/"* ]]; then
+    printf '%s' "${file#"$VALIDATION_STEPDEFS_DIR"/}"
+  else
+    basename "$file"
+  fi
+}
+
+output_validate_file_start() {
+  local label=$1
+  local path=$2
+
+  bold "\n$label: $path"
+}
+
+output_validate_ok() {
+  green "  ✓ $1"
+}
+
+output_validate_fail() {
+  red "  ✗ $1"
+}
+
+output_validate_detail() {
+  local detail=$1
+
+  printf '    %s\n' "$detail"
+}
+
+output_validate_source_line() {
+  local source_line=$1
+
+  blue "    $source_line"
+}
+
+output_validate_summary() {
+  local total_files=$1
+  local failed_files=$2
+  local passed_files=$((total_files - failed_files))
+  local label=files
+
+  if ((total_files == 1)); then
+    label=file
+  fi
+
+  if ((failed_files == 0)); then
+    green_bold "\nvalidation passed: $total_files $label checked"
+    return 0
+  fi
+
+  red_bold "\nvalidation failed: $passed_files passing, $failed_files failing"
+}
+
 # src/lib/runtime/step.sh
+step_match() {
+  local type=$1
+  local text=$2
+  local i
+  local step_type
+
+  for i in "${!STEPDEF_TYPES[@]}"; do
+    step_type=${STEPDEF_TYPES[$i]}
+    [[ $step_type == "$type" ]] || continue
+
+    if [[ $text =~ ${STEPDEF_REGEXES[$i]} ]]; then
+      return 0
+    fi
+  done
+
+  return 1
+}
+
 step_run() {
   local type=$1
   local text=$2
@@ -902,6 +1224,76 @@ shellkin_test_command() {
 
 }
 
+# :command.function
+shellkin_validate_command() {
+
+  # src/commands/validate.sh
+  target="$(realpath "${args['target']}")"
+  stepdefs_dir=
+  validation_status=0
+  validation_total=0
+  validation_failed=0
+
+  STEPDEF_TYPES=()
+  STEPDEF_PATTERNS=()
+  STEPDEF_REGEXES=()
+  STEPDEF_TOKENS_LIST=()
+  STEPDEF_BODIES=()
+
+  if [[ -f $target ]]; then
+    features_dir="$(dirname "$target")"
+    feature_files=("$target")
+  else
+    features_dir="$target"
+    readarray -t feature_files < <(find "$features_dir" -maxdepth 1 -type f -name '*.feature' | sort)
+  fi
+
+  stepdefs_dir="$features_dir/$SHELLKIN_STEPDEFS_ROOT"
+  VALIDATION_FEATURES_DIR="$features_dir"
+  VALIDATION_STEPDEFS_DIR="$stepdefs_dir"
+  readarray -t stepdef_files < <(find "$stepdefs_dir" -maxdepth 1 -type f \( -name '*.sh' -o -name '*.bash' \) | sort)
+
+  for stepdef_file in "${stepdef_files[@]}"; do
+    ((validation_total += 1))
+    output_validate_file_start "stepdefs" "$(validation_stepdef_relpath "$stepdef_file")"
+
+    if stepdefs_file_parse "$stepdef_file"; then
+      output_validate_ok "step definitions"
+    else
+      output_validate_fail "step definitions"
+      output_validate_detail "invalid step definition file"
+      validation_status=1
+      ((validation_failed += 1))
+    fi
+  done
+
+  for feature_file in "${feature_files[@]}"; do
+    ((validation_total += 1))
+    output_validate_file_start "file" "$(validation_feature_relpath "$feature_file")"
+
+    if feature_validate "$feature_file"; then
+      output_validate_ok "feature"
+    else
+      output_validate_fail "feature"
+      if [[ -n ${FEATURE_VALIDATION_LINE:-} ]]; then
+        output_validate_detail "line ${FEATURE_VALIDATION_LINE}: ${FEATURE_VALIDATION_MESSAGE}"
+      fi
+      if [[ -n ${FEATURE_VALIDATION_CONTEXT:-} ]]; then
+        output_validate_source_line "${FEATURE_VALIDATION_CONTEXT}"
+      elif [[ -n ${FEATURE_VALIDATION_MESSAGE:-} && -z ${FEATURE_VALIDATION_LINE:-} ]]; then
+        output_validate_detail "$FEATURE_VALIDATION_MESSAGE"
+      fi
+      validation_status=1
+      ((validation_failed += 1))
+    fi
+  done
+
+  output_validate_summary "$validation_total" "$validation_failed"
+
+  return "$validation_status"
+
+}
+
 # :command.parse_requirements
 parse_requirements() {
   local key
@@ -942,6 +1334,13 @@ parse_requirements() {
       action="test"
       shift
       shellkin_test_parse_requirements "$@"
+      shift $#
+      ;;
+
+    validate | v)
+      action="validate"
+      shift
+      shellkin_validate_parse_requirements "$@"
       shift $#
       ;;
 
@@ -1050,6 +1449,72 @@ shellkin_test_parse_requirements() {
 
 }
 
+# :command.parse_requirements
+shellkin_validate_parse_requirements() {
+  local key
+
+  # :command.fixed_flags_filter
+  while [[ $# -gt 0 ]]; do
+    key="$1"
+    case "$key" in
+      --help | -h)
+        long_usage=yes
+        shellkin_validate_usage
+        exit
+        ;;
+
+      *)
+        break
+        ;;
+
+    esac
+  done
+
+  # :command.command_filter
+  action="validate"
+
+  # :command.parse_requirements_while
+  while [[ $# -gt 0 ]]; do
+    key="$1"
+    case "$key" in
+
+      -?*)
+        printf "invalid option: %s\n" "$key" >&2
+        exit 1
+        ;;
+
+      *)
+        # :command.parse_requirements_case
+        # :command.parse_requirements_case_simple
+        # :argument.case
+        if [[ -z ${args['target']+x} ]]; then
+          args['target']=$1
+          shift
+        else
+          printf "invalid argument: %s\n" "$key" >&2
+          exit 1
+        fi
+
+        ;;
+
+    esac
+  done
+
+  # :command.default_assignments
+  [[ -n ${args['target']:-} ]] || args['target']="$SHELLKIN_FEATURES_ROOT"
+
+  # :command.validations
+  # :argument.validations
+  if [[ -v args['target'] ]]; then
+    validation_output="$(validate_test_target "${args['target']:-}")"
+    if [[ -n "$validation_output" ]]; then
+      printf "validation error in %s:\n%s\n" "TARGET" "$validation_output" >&2
+      exit 1
+    fi
+  fi
+
+}
+
 # :command.initialize
 initialize() {
   declare -g version="0.1.1"
@@ -1073,6 +1538,7 @@ bashly_run() {
 
   case "$action" in
     "test") shellkin_test_command ;;
+    "validate") shellkin_validate_command ;;
   esac
 }
 
