@@ -29,8 +29,8 @@ run "$command"
 
 ### Installing using the setup script
 
-This setup script will download the latest shellkin release executable to
-`/usr/local/bin/`.
+This setup script will download the latest shellkin release executable as well
+as the man pages.
 
 ```shell
 $ curl -Ls get.dannyb.co/shellkin/setup | bash
@@ -41,12 +41,13 @@ Feel free to inspect the [setup script](setup) before running.
 
 ### Installing manually
 
-Download the `shellkin` bash script, place it in your path and make it
-executable.
+Download the `shellkin` bash script from the
+[latest release](https://github.com/DannyBen/shellkin/releases/latest), place
+it in your path and make it executable.
 
-```console
+```shell
 # download the latest release and place it in /usr/local/bin
-wget https://github.com/DannyBen/shellkin/releases/latest/download/shellkin
+wget https://get.dannyb.co/shellkin
 sudo install -m 0755 shellkin /usr/local/bin/
 ```
 
