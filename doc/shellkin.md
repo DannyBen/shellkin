@@ -1,4 +1,4 @@
-% shellkin(1) Version 0.1.0 | Gherkin-style BDD Test Framework for Bash Scripts
+% shellkin(1) Version 0.1.1 | Gherkin-style BDD Test Framework for Bash Scripts
 % Danny Ben Shitrit \<https://github.com/dannyben\>
 % March 2026
 
