@@ -59,7 +59,7 @@ stepdefs_file_parse() {
       current_body+=$'\n'
     fi
     current_body+=$line
-  done < "$file"
+  done <"$file"
 
   if [[ -n $current_type ]]; then
     STEPDEF_TYPE=$current_type

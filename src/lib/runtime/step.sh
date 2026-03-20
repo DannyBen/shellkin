@@ -13,7 +13,7 @@ step_run() {
 
     if [[ $text =~ ${STEPDEF_REGEXES[$i]} ]]; then
       if [[ -n ${STEPDEF_TOKENS_LIST[$i]} ]]; then
-        read -r -a tokens <<< "${STEPDEF_TOKENS_LIST[$i]}"
+        read -r -a tokens <<<"${STEPDEF_TOKENS_LIST[$i]}"
       else
         tokens=()
       fi

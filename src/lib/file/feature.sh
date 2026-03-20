@@ -42,7 +42,7 @@ feature_run() {
     feature_line_parse "$line"
 
     case $FEATURE_LINE_KIND in
-      blank|comment)
+      blank | comment)
         continue
         ;;
       feature)
@@ -106,7 +106,7 @@ feature_run() {
         failed=1
         ;;
     esac
-  done < "$feature_file"
+  done <"$feature_file"
 
   if ((failed == 0 && scenario_seen != 0)); then
     feature_scenario_run "$FEATURE_SCENARIO_NAME" background_steps scenario_steps || failed=1

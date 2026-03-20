@@ -3,7 +3,7 @@ set -euo pipefail
 
 prepare_installer() {
   echo "Initializing installer..."
-  SSI_VERSION="0.1.8"
+  SSI_VERSION="0.1.9"
 
   # Set up tmp dir where all work is done
   tmpdir="$(mktemp -d)"
@@ -28,5 +28,6 @@ prepare_installer() {
 prepare_installer
 
 ssi log info Installing shellkin
-ssi install bin https://raw.githubusercontent.com/DannyBen/shellkin/refs/heads/master/shellkin
+ssi install bin https://github.com/DannyBen/shellkin/releases/latest/download/shellkin
+ssi install man https://github.com/DannyBen/shellkin/releases/latest/download/manpages.tar.gz
 ssi log debug Installation complete

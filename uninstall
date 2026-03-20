@@ -3,7 +3,7 @@ set -euo pipefail
 
 prepare_installer() {
   echo "Initializing installer..."
-  SSI_VERSION="0.1.8"
+  SSI_VERSION="0.1.9"
 
   # Set up tmp dir where all work is done
   tmpdir="$(mktemp -d)"
@@ -28,4 +28,5 @@ prepare_installer() {
 prepare_installer
 ssi log info Uninstalling shellkin
 ssi uninstall bin shellkin
+ssi uninstall man shellkin
 ssi log debug Uninstallation complete

@@ -1,6 +1,6 @@
 stepdef_type_valid() {
   case $1 in
-    Given|When|Then|Step)
+    Given | When | Then | Step)
       return 0
       ;;
     *)

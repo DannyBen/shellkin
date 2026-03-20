@@ -230,7 +230,7 @@ feature_run() {
     feature_line_parse "$line"
 
     case $FEATURE_LINE_KIND in
-      blank|comment)
+      blank | comment)
         continue
         ;;
       feature)
@@ -294,7 +294,7 @@ feature_run() {
         failed=1
         ;;
     esac
-  done < "$feature_file"
+  done <"$feature_file"
 
   if ((failed == 0 && scenario_seen != 0)); then
     feature_scenario_run "$FEATURE_SCENARIO_NAME" background_steps scenario_steps || failed=1
@@ -451,7 +451,7 @@ stepdefs_file_parse() {
       current_body+=$'\n'
     fi
     current_body+=$line
-  done < "$file"
+  done <"$file"
 
   if [[ -n $current_type ]]; then
     STEPDEF_TYPE=$current_type
@@ -523,7 +523,7 @@ step_run() {
 
     if [[ $text =~ ${STEPDEF_REGEXES[$i]} ]]; then
       if [[ -n ${STEPDEF_TOKENS_LIST[$i]} ]]; then
-        read -r -a tokens <<< "${STEPDEF_TOKENS_LIST[$i]}"
+        read -r -a tokens <<<"${STEPDEF_TOKENS_LIST[$i]}"
       else
         tokens=()
       fi
@@ -605,7 +605,7 @@ feature_step_type_resolve() {
   local current_type=$2
 
   case $current_type in
-    And|But)
+    And | But)
       [[ -n $previous_type ]] || return 1
       printf '%s' "$previous_type"
       ;;
@@ -655,7 +655,7 @@ _pattern_escape_literal() {
 # src/lib/syntax/stepdef.sh
 stepdef_type_valid() {
   case $1 in
-    Given|When|Then|Step)
+    Given | When | Then | Step)
       return 0
       ;;
     *)

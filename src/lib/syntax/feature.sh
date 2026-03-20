@@ -56,7 +56,7 @@ feature_step_type_resolve() {
   local current_type=$2
 
   case $current_type in
-    And|But)
+    And | But)
       [[ -n $previous_type ]] || return 1
       printf '%s' "$previous_type"
       ;;
