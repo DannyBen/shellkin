@@ -20,7 +20,7 @@ shellkin_usage() {
   printf "shellkin - Gherkin-style BDD Test Framework for Bash Scripts\n\n"
 
   printf "%s\n" "$(bold "Usage:")"
-  printf "  shellkin COMMAND\n"
+  printf "  shellkin [COMMAND]\n"
   printf "  shellkin [COMMAND] --help | -h\n"
   printf "  shellkin --version | -v\n"
   echo
@@ -67,7 +67,7 @@ shellkin_test_usage() {
   echo
 
   printf "%s\n" "$(bold "Usage:")"
-  printf "  shellkin [test] [TARGET]\n"
+  printf "  shellkin [test] [TARGET] [OPTIONS]\n"
   printf "  shellkin test --help | -h\n"
   echo
 
@@ -75,6 +75,12 @@ shellkin_test_usage() {
   if [[ -n "$long_usage" ]]; then
     # :command.usage_options
     printf "%s\n" "$(bold "Options:")"
+
+    # :command.usage_flags
+    # :flag.usage
+    printf "  %s\n" "$(green "--fail-fast, -f")"
+    printf "    Abort after the first failing scenario\n"
+    echo
 
     # :command.usage_fixed_flags
     printf "  %s\n" "$(green "--help, -h")"
@@ -271,10 +277,18 @@ feature_run() {
           break
         fi
         if ((scenario_seen != 0)); then
-          feature_scenario_run "$FEATURE_SCENARIO_NAME" background_steps scenario_steps || failed=1
+          if feature_scenario_run "$FEATURE_SCENARIO_NAME" background_steps scenario_steps; then
+            :
+          else
+            failed=1
+            if ((TEST_FAIL_FAST != 0)); then
+              TEST_ABORT_RUN=1
+              scenario_seen=0
+              break
+            fi
+          fi
         fi
         scenario_seen=1
-        ((TEST_SCENARIOS_TOTAL += 1))
         section=scenario
         in_description=0
         FEATURE_SCENARIO_NAME=$FEATURE_LINE_NAME
@@ -314,40 +328,54 @@ feature_run() {
   if ((failed == 0 && scenario_seen != 0)); then
     feature_scenario_run "$FEATURE_SCENARIO_NAME" background_steps scenario_steps || failed=1
   elif ((scenario_seen != 0)); then
-    feature_scenario_run "$FEATURE_SCENARIO_NAME" background_steps scenario_steps || failed=1
+    if feature_scenario_run "$FEATURE_SCENARIO_NAME" background_steps scenario_steps; then
+      :
+    else
+      failed=1
+      if ((TEST_FAIL_FAST != 0)); then
+        TEST_ABORT_RUN=1
+      fi
+    fi
   fi
 
   set -e
   return "$failed"
 }
 
+feature_recorded_step_parse() {
+  local recorded=$1
+  local remainder
+
+  FEATURE_RECORDED_STEP_KEYWORD=${recorded%%$'\t'*}
+  remainder=${recorded#*$'\t'}
+  FEATURE_RECORDED_STEP_DOC_STRING=
+
+  if [[ $remainder == *$'\t'* ]]; then
+    FEATURE_RECORDED_STEP_TEXT=${remainder%%$'\t'*}
+    FEATURE_RECORDED_STEP_DOC_STRING=${remainder#*$'\t'}
+  else
+    FEATURE_RECORDED_STEP_TEXT=$remainder
+  fi
+}
+
 feature_recorded_step_run() {
   local recorded=$1
   local previous_type=$2
-  local step_keyword=${recorded%%$'\t'*}
-  local remainder=${recorded#*$'\t'}
-  local step_text
-  local doc_string=
   local resolved_type
   local status
 
-  if [[ $remainder == *$'\t'* ]]; then
-    step_text=${remainder%%$'\t'*}
-    doc_string=${remainder#*$'\t'}
-  else
-    step_text=$remainder
-  fi
+  feature_recorded_step_parse "$recorded"
 
-  resolved_type=$(feature_step_type_resolve "$previous_type" "$step_keyword") || return 1
+  resolved_type=$(feature_step_type_resolve "$previous_type" "$FEATURE_RECORDED_STEP_KEYWORD") || return 1
   FEATURE_PREVIOUS_STEP_TYPE=$resolved_type
   export DOC_STRING=
-  if [[ -n $doc_string ]]; then
-    export DOC_STRING=$doc_string
+  if [[ -n $FEATURE_RECORDED_STEP_DOC_STRING ]]; then
+    export DOC_STRING=$FEATURE_RECORDED_STEP_DOC_STRING
   fi
 
-  step_run "$resolved_type" "$step_text"
+  step_run "$resolved_type" "$FEATURE_RECORDED_STEP_TEXT"
   status=$?
-  output_step_result "$status" "$step_keyword" "$step_text"
+  output_step_result "$status" "$FEATURE_RECORDED_STEP_KEYWORD" "$FEATURE_RECORDED_STEP_TEXT"
   return "$status"
 }
 
@@ -357,16 +385,40 @@ feature_scenario_run() {
   local -n scenario_steps_ref=$3
   local step
   local scenario_failed=0
+  local skip_remaining=0
 
+  ((TEST_SCENARIOS_TOTAL += 1))
   FEATURE_PREVIOUS_STEP_TYPE=
   output_scenario_start "$scenario_name"
 
   set +e
   for step in "${background_steps_ref[@]}"; do
-    feature_recorded_step_run "$step" "$FEATURE_PREVIOUS_STEP_TYPE" || scenario_failed=1
+    if ((skip_remaining != 0)); then
+      feature_recorded_step_parse "$step"
+      output_step_skipped "$FEATURE_RECORDED_STEP_KEYWORD" "$FEATURE_RECORDED_STEP_TEXT"
+      continue
+    fi
+
+    if feature_recorded_step_run "$step" "$FEATURE_PREVIOUS_STEP_TYPE"; then
+      :
+    else
+      scenario_failed=1
+      skip_remaining=1
+    fi
   done
   for step in "${scenario_steps_ref[@]}"; do
-    feature_recorded_step_run "$step" "$FEATURE_PREVIOUS_STEP_TYPE" || scenario_failed=1
+    if ((skip_remaining != 0)); then
+      feature_recorded_step_parse "$step"
+      output_step_skipped "$FEATURE_RECORDED_STEP_KEYWORD" "$FEATURE_RECORDED_STEP_TEXT"
+      continue
+    fi
+
+    if feature_recorded_step_run "$step" "$FEATURE_PREVIOUS_STEP_TYPE"; then
+      :
+    else
+      scenario_failed=1
+      skip_remaining=1
+    fi
   done
   set -e
 
@@ -505,10 +557,11 @@ output_failure_block() {
   fi
 
   output_failure_label "$label"
-  printf ':\n'
+  printf ':\n\n'
   while IFS= read -r line || [[ -n $line ]]; do
     printf '      %s\n' "$line"
   done <<<"$value"
+  printf '\n'
 }
 
 output_step_result() {
@@ -531,6 +584,13 @@ output_step_result() {
   fi
 
   green "$line"
+}
+
+output_step_skipped() {
+  local type=$1
+  local text=$2
+
+  cyan "  - $type $text (skipped)"
 }
 
 output_summary() {
@@ -810,6 +870,8 @@ shellkin_test_command() {
   STEPDEF_BODIES=()
   TEST_SCENARIOS_TOTAL=0
   TEST_SCENARIOS_FAILED=0
+  TEST_FAIL_FAST="${args[--fail-fast]:-0}"
+  TEST_ABORT_RUN=0
 
   if [[ -f $target ]]; then
     features_dir="$(dirname "$target")"
@@ -829,6 +891,9 @@ shellkin_test_command() {
 
   for feature_file in "${feature_files[@]}"; do
     feature_run "$feature_file" || feature_status=1
+    if ((TEST_ABORT_RUN != 0)); then
+      break
+    fi
   done
 
   output_summary "$TEST_SCENARIOS_TOTAL" "$TEST_SCENARIOS_FAILED"
@@ -881,11 +946,6 @@ parse_requirements() {
       ;;
 
     # :command.command_fallback
-    "")
-      shellkin_usage >&2
-      exit 1
-      ;;
-
     *)
       action="test"
       shellkin_test_parse_requirements "$@"
@@ -945,6 +1005,13 @@ shellkin_test_parse_requirements() {
   while [[ $# -gt 0 ]]; do
     key="$1"
     case "$key" in
+      # :flag.case
+      --fail-fast | -f)
+
+        # :flag.case_no_arg
+        args['--fail-fast']=1
+        shift
+        ;;
 
       -?*)
         printf "invalid option: %s\n" "$key" >&2

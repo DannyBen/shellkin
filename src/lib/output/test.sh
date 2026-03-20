@@ -30,10 +30,11 @@ output_failure_block() {
   fi
 
   output_failure_label "$label"
-  printf ':\n'
+  printf ':\n\n'
   while IFS= read -r line || [[ -n $line ]]; do
     printf '      %s\n' "$line"
   done <<<"$value"
+  printf '\n'
 }
 
 output_step_result() {
@@ -56,6 +57,13 @@ output_step_result() {
   fi
 
   green "$line"
+}
+
+output_step_skipped() {
+  local type=$1
+  local text=$2
+
+  cyan "  - $type $text (skipped)"
 }
 
 output_summary() {

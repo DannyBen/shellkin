@@ -71,3 +71,36 @@ EOF
   assert_output_contains "Feature: Create a file"
   assert_output_contains "1 scenario, 0 failing"
 }
+
+@test "shellkin test --fail-fast stops after the first failing scenario" {
+  write_file features/sample.feature <<'EOF'
+Feature: Fail fast
+
+Scenario: First
+  When I fail
+  Then I would create chaos
+
+Scenario: Second
+  Then I should not run
+EOF
+
+  write_file features/step_definitions/core.sh <<'EOF'
+@When I fail
+return 1
+
+@Then I would create chaos
+touch "$TEST_ROOT/chaos"
+
+@Then I should not run
+touch "$TEST_ROOT/second-scenario"
+EOF
+
+  run "$SHELLKIN_REPO_ROOT/shellkin" test --fail-fast "$TEST_ROOT/features"
+
+  [ "$status" -eq 1 ]
+  [ ! -e "$TEST_ROOT/chaos" ]
+  [ ! -e "$TEST_ROOT/second-scenario" ]
+  assert_output_contains "Scenario: First"
+  [[ "$output" != *"Scenario: Second"* ]]
+  assert_output_contains "1 scenario, 0 passing, 1 failing"
+}

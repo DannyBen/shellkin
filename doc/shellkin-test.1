@@ -4,7 +4,7 @@
 .SH NAME
 \f[B]shellkin test\f[R] \- Run feature tests
 .SH SYNOPSIS
-shellkin [test] TARGET
+shellkin [test] TARGET OPTIONS
 .SH DESCRIPTION
 Run feature tests
 .IP \(bu 2
@@ -16,5 +16,8 @@ Alias: \f[B]t\f[R]
 Path to features directory or a single feature file
 .IP \(bu 2
 Default Value: \f[B]$SHELLKIN_FEATURES_ROOT\f[R]
+.SH OPTIONS
+.SS \-\-fail\-fast, \-f
+Abort after the first failing scenario
 .SH SEE ALSO
 \f[B]shellkin\f[R](1)

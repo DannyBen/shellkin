@@ -68,10 +68,18 @@ feature_run() {
           break
         fi
         if ((scenario_seen != 0)); then
-          feature_scenario_run "$FEATURE_SCENARIO_NAME" background_steps scenario_steps || failed=1
+          if feature_scenario_run "$FEATURE_SCENARIO_NAME" background_steps scenario_steps; then
+            :
+          else
+            failed=1
+            if ((TEST_FAIL_FAST != 0)); then
+              TEST_ABORT_RUN=1
+              scenario_seen=0
+              break
+            fi
+          fi
         fi
         scenario_seen=1
-        ((TEST_SCENARIOS_TOTAL += 1))
         section=scenario
         in_description=0
         FEATURE_SCENARIO_NAME=$FEATURE_LINE_NAME
@@ -111,40 +119,54 @@ feature_run() {
   if ((failed == 0 && scenario_seen != 0)); then
     feature_scenario_run "$FEATURE_SCENARIO_NAME" background_steps scenario_steps || failed=1
   elif ((scenario_seen != 0)); then
-    feature_scenario_run "$FEATURE_SCENARIO_NAME" background_steps scenario_steps || failed=1
+    if feature_scenario_run "$FEATURE_SCENARIO_NAME" background_steps scenario_steps; then
+      :
+    else
+      failed=1
+      if ((TEST_FAIL_FAST != 0)); then
+        TEST_ABORT_RUN=1
+      fi
+    fi
   fi
 
   set -e
   return "$failed"
 }
 
+feature_recorded_step_parse() {
+  local recorded=$1
+  local remainder
+
+  FEATURE_RECORDED_STEP_KEYWORD=${recorded%%$'\t'*}
+  remainder=${recorded#*$'\t'}
+  FEATURE_RECORDED_STEP_DOC_STRING=
+
+  if [[ $remainder == *$'\t'* ]]; then
+    FEATURE_RECORDED_STEP_TEXT=${remainder%%$'\t'*}
+    FEATURE_RECORDED_STEP_DOC_STRING=${remainder#*$'\t'}
+  else
+    FEATURE_RECORDED_STEP_TEXT=$remainder
+  fi
+}
+
 feature_recorded_step_run() {
   local recorded=$1
   local previous_type=$2
-  local step_keyword=${recorded%%$'\t'*}
-  local remainder=${recorded#*$'\t'}
-  local step_text
-  local doc_string=
   local resolved_type
   local status
 
-  if [[ $remainder == *$'\t'* ]]; then
-    step_text=${remainder%%$'\t'*}
-    doc_string=${remainder#*$'\t'}
-  else
-    step_text=$remainder
-  fi
+  feature_recorded_step_parse "$recorded"
 
-  resolved_type=$(feature_step_type_resolve "$previous_type" "$step_keyword") || return 1
+  resolved_type=$(feature_step_type_resolve "$previous_type" "$FEATURE_RECORDED_STEP_KEYWORD") || return 1
   FEATURE_PREVIOUS_STEP_TYPE=$resolved_type
   export DOC_STRING=
-  if [[ -n $doc_string ]]; then
-    export DOC_STRING=$doc_string
+  if [[ -n $FEATURE_RECORDED_STEP_DOC_STRING ]]; then
+    export DOC_STRING=$FEATURE_RECORDED_STEP_DOC_STRING
   fi
 
-  step_run "$resolved_type" "$step_text"
+  step_run "$resolved_type" "$FEATURE_RECORDED_STEP_TEXT"
   status=$?
-  output_step_result "$status" "$step_keyword" "$step_text"
+  output_step_result "$status" "$FEATURE_RECORDED_STEP_KEYWORD" "$FEATURE_RECORDED_STEP_TEXT"
   return "$status"
 }
 
@@ -154,16 +176,40 @@ feature_scenario_run() {
   local -n scenario_steps_ref=$3
   local step
   local scenario_failed=0
+  local skip_remaining=0
 
+  ((TEST_SCENARIOS_TOTAL += 1))
   FEATURE_PREVIOUS_STEP_TYPE=
   output_scenario_start "$scenario_name"
 
   set +e
   for step in "${background_steps_ref[@]}"; do
-    feature_recorded_step_run "$step" "$FEATURE_PREVIOUS_STEP_TYPE" || scenario_failed=1
+    if ((skip_remaining != 0)); then
+      feature_recorded_step_parse "$step"
+      output_step_skipped "$FEATURE_RECORDED_STEP_KEYWORD" "$FEATURE_RECORDED_STEP_TEXT"
+      continue
+    fi
+
+    if feature_recorded_step_run "$step" "$FEATURE_PREVIOUS_STEP_TYPE"; then
+      :
+    else
+      scenario_failed=1
+      skip_remaining=1
+    fi
   done
   for step in "${scenario_steps_ref[@]}"; do
-    feature_recorded_step_run "$step" "$FEATURE_PREVIOUS_STEP_TYPE" || scenario_failed=1
+    if ((skip_remaining != 0)); then
+      feature_recorded_step_parse "$step"
+      output_step_skipped "$FEATURE_RECORDED_STEP_KEYWORD" "$FEATURE_RECORDED_STEP_TEXT"
+      continue
+    fi
+
+    if feature_recorded_step_run "$step" "$FEATURE_PREVIOUS_STEP_TYPE"; then
+      :
+    else
+      scenario_failed=1
+      skip_remaining=1
+    fi
   done
   set -e
 

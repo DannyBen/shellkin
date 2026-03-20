@@ -90,12 +90,18 @@ Implemented pieces include:
 # Run all repo features:
 shellkin test
 
+# Stop after the first failing scenario:
+shellkin test --fail-fast
+
 # Run a specific directory:
 shellkin test path/to/features
 
 # Run a single feature file:
 shellkin test path/to/features/example.feature
 ```
+
+When a step fails, the remaining steps in that scenario are marked as skipped
+and are not executed.
 
 ## Features Directory Layout
 

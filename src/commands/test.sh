@@ -9,6 +9,8 @@ STEPDEF_TOKENS_LIST=()
 STEPDEF_BODIES=()
 TEST_SCENARIOS_TOTAL=0
 TEST_SCENARIOS_FAILED=0
+TEST_FAIL_FAST="${args[--fail-fast]:-0}"
+TEST_ABORT_RUN=0
 
 if [[ -f $target ]]; then
   features_dir="$(dirname "$target")"
@@ -28,6 +30,9 @@ done
 
 for feature_file in "${feature_files[@]}"; do
   feature_run "$feature_file" || feature_status=1
+  if ((TEST_ABORT_RUN != 0)); then
+    break
+  fi
 done
 
 output_summary "$TEST_SCENARIOS_TOTAL" "$TEST_SCENARIOS_FAILED"

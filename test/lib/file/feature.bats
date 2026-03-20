@@ -18,8 +18,13 @@ setup() {
   LAST_STDERR=
   FEATURE_NAME=
   FEATURE_PREVIOUS_STEP_TYPE=
+  FEATURE_RECORDED_STEP_KEYWORD=
+  FEATURE_RECORDED_STEP_TEXT=
+  FEATURE_RECORDED_STEP_DOC_STRING=
   TEST_SCENARIOS_TOTAL=0
   TEST_SCENARIOS_FAILED=0
+  TEST_FAIL_FAST=0
+  TEST_ABORT_RUN=0
 
   cd "$TEST_ROOT"
 }
@@ -52,6 +57,30 @@ teardown() {
   feature_scenario_run "Example" background_steps scenario_steps
 
   [ -f "$TEMP_DIR/somefile" ]
+}
+
+@test "feature_scenario_run skips the remaining steps after a failure" {
+  stepdef_parse "@Given I fail setup"
+  stepdef_register 'return 1'
+  stepdef_parse "@When I run '{command}'"
+  stepdef_register 'run "$command"'
+  stepdef_parse "@Then the file '{path}' should exist"
+  stepdef_register '[[ -f "$path" ]]'
+
+  background_steps=($'Given\tI fail setup')
+  scenario_steps=($'When\tI run '\''touch somefile'\''' $'Then\tthe file '\''somefile'\'' should exist')
+
+  if feature_scenario_run "Example" background_steps scenario_steps >"$TEST_ROOT/output.txt"; then
+    status=0
+  else
+    status=$?
+  fi
+
+  [ "$status" -eq 1 ]
+  [ ! -f "$TEST_ROOT/somefile" ]
+  output=$(strip_ansi <"$TEST_ROOT/output.txt")
+  assert_output_contains "- When I run 'touch somefile' (skipped)"
+  assert_output_contains "- Then the file 'somefile' should exist (skipped)"
 }
 
 @test "feature_run executes a scenario using loaded step definitions" {
@@ -156,6 +185,13 @@ EOF
   [ "$(cat "$TEST_ROOT/doc_string.txt")" = $'first line\nsecond line' ]
 }
 
+@test "output_failure_block adds spacing around multiline values" {
+  output_failure_block "LAST_STDOUT" $'first line\nsecond line' >"$TEST_ROOT/output.txt"
+
+  output=$(strip_ansi <"$TEST_ROOT/output.txt")
+  [ "$output" = $'    LAST_STDOUT:\n\n      first line\n      second line' ]
+}
+
 @test "feature_run prints failure context for failed steps" {
   write_file stepdefs.sh <<'EOF'
 @When I run '{command}'
@@ -190,4 +226,39 @@ EOF
   assert_output_contains "hello"
   assert_output_contains "LAST_STDERR:"
   assert_output_contains "boom"
+}
+
+@test "feature_run sets abort state when fail-fast is enabled and a scenario fails" {
+  write_file stepdefs.sh <<'EOF'
+@When I fail
+return 1
+
+@Then I would create a file
+touch "$TEST_ROOT/should-not-exist"
+EOF
+
+  write_file test.feature <<'EOF'
+Feature: Fail fast
+
+Scenario: First
+  When I fail
+  Then I would create a file
+
+Scenario: Second
+  When I fail
+EOF
+
+  stepdefs_file_parse "$TEST_ROOT/stepdefs.sh"
+  TEST_FAIL_FAST=1
+
+  if feature_run "$TEST_ROOT/test.feature" >"$TEST_ROOT/output.txt"; then
+    status=0
+  else
+    status=$?
+  fi
+
+  [ "$status" -eq 1 ]
+  [ "$TEST_ABORT_RUN" -eq 1 ]
+  [ "$TEST_SCENARIOS_TOTAL" -eq 1 ]
+  [ ! -e "$TEST_ROOT/should-not-exist" ]
 }

@@ -10,7 +10,7 @@ NAME
 SYNOPSIS
 ==================================================
 
-shellkin [test] [TARGET]
+shellkin [test] [TARGET] [OPTIONS]
 
 DESCRIPTION
 ==================================================
@@ -29,6 +29,15 @@ TARGET
 Path to features directory or a single feature file
 
 - Default Value: **$SHELLKIN_FEATURES_ROOT**
+
+OPTIONS
+==================================================
+
+--fail-fast, -f
+--------------------------------------------------
+
+Abort after the first failing scenario
+
 
 SEE ALSO
 ==================================================
