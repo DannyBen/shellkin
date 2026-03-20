@@ -9,7 +9,7 @@ step_run() {
 
   for i in "${!STEPDEF_TYPES[@]}"; do
     step_type=${STEPDEF_TYPES[$i]}
-    [[ $step_type == "$type" || $step_type == "Step" ]] || continue
+    [[ $step_type == "$type" ]] || continue
 
     if [[ $text =~ ${STEPDEF_REGEXES[$i]} ]]; then
       if [[ -n ${STEPDEF_TOKENS_LIST[$i]} ]]; then

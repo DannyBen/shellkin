@@ -45,15 +45,6 @@ teardown() {
   [ "$STEP_RESULT" = "left.txt:right.txt" ]
 }
 
-@test "step_run allows a generic Step definition to match any step type" {
-  stepdef_parse "@Step I am in '{directory}'"
-  stepdef_register 'STEP_RESULT="$directory"'
-
-  step_run Given "I am in 'tmp'"
-
-  [ "$STEP_RESULT" = "tmp" ]
-}
-
 @test "step_run returns non-zero when no step definition matches" {
   stepdef_parse "@When I run '{command}'"
   stepdef_register 'run "$command"'

@@ -22,7 +22,6 @@ teardown() {
   stepdef_type_valid Given
   stepdef_type_valid When
   stepdef_type_valid Then
-  stepdef_type_valid Step
 }
 
 @test "stepdef_type_valid rejects unsupported step keywords" {
@@ -65,6 +64,12 @@ teardown() {
 
 @test "stepdef_parse returns non-zero for an unsupported step type" {
   run stepdef_parse "@However I run '{command}'"
+
+  [ "$status" -eq 1 ]
+}
+
+@test "stepdef_parse returns non-zero for the non-standard Step keyword" {
+  run stepdef_parse "@Step I run '{command}'"
 
   [ "$status" -eq 1 ]
 }
