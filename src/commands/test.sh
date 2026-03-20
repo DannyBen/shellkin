@@ -1,8 +1,6 @@
 target="$(realpath "${args['target']}")"
 stepdefs_dir=
 feature_status=0
-SHELLKIN_ROOT="$(realpath "$(dirname "${BASH_SOURCE[0]}")")"
-export SHELLKIN_ROOT
 
 STEPDEF_TYPES=()
 STEPDEF_PATTERNS=()

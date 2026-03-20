@@ -26,7 +26,7 @@ TEMP_DIR=$(mktemp -d)
 cd "$TEMP_DIR"
 
 @When I run '{command}'
-PATH="$SHELLKIN_ROOT:$PATH" run "$command"
+run "$command"
 
 @Then the file '{path}' should exist
 [[ -f "$path" ]]

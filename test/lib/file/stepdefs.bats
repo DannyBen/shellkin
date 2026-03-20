@@ -31,8 +31,8 @@ EOF
 
   [ "${#STEPDEF_TYPES[@]}" -eq 2 ]
   [ "${STEPDEF_TYPES[0]}" = "When" ]
+  [ "${STEPDEF_TYPES[1]}" = "Then" ]
   [ "${STEPDEF_REGEXES[0]}" = "I run '(.+)'" ]
-  [ "${STEPDEF_TOKENS_LIST[1]}" = "path" ]
 }
 
 @test "stepdefs_file_parse preserves multi-line step bodies" {
@@ -47,12 +47,11 @@ EOF
   [ "${STEPDEF_BODIES[0]}" = $'mkdir -p "$directory"\ncd "$directory"' ]
 }
 
-@test "stepdefs_file_parse ignores blank lines before a definition and between header and body" {
+@test "stepdefs_file_parse ignores blank lines before a definition" {
   write_file stepdefs.sh <<'EOF'
 
 
 @When I run '{command}'
-
 run "$command"
 EOF
 
@@ -60,6 +59,41 @@ EOF
 
   [ "${#STEPDEF_TYPES[@]}" -eq 1 ]
   [ "${STEPDEF_BODIES[0]}" = 'run "$command"' ]
+}
+
+@test "stepdefs_file_parse keeps blank lines inside a step body" {
+  write_file stepdefs.sh <<'EOF'
+@When I run '{command}'
+
+run "$command"
+
+printf 'done'
+EOF
+
+  stepdefs_file_parse "$TEST_ROOT/stepdefs.sh"
+
+  [ "${#STEPDEF_TYPES[@]}" -eq 1 ]
+  [[ "${STEPDEF_BODIES[0]}" == *$'\n\n'* ]]
+  [[ "${STEPDEF_BODIES[0]}" == *'run "$command"'* ]]
+  [[ "${STEPDEF_BODIES[0]}" == *"printf 'done'"* ]]
+}
+
+@test "stepdefs_file_parse ends a definition at the next valid header" {
+  write_file stepdefs.sh <<'EOF'
+@When I run '{command}'
+run "$command"
+
+@Then the file '{path}' should exist
+[[ -f "$path" ]]
+EOF
+
+  stepdefs_file_parse "$TEST_ROOT/stepdefs.sh"
+
+  [ "${#STEPDEF_TYPES[@]}" -eq 2 ]
+  [ "${STEPDEF_TYPES[0]}" = "When" ]
+  [ "${STEPDEF_TYPES[1]}" = "Then" ]
+  [[ "${STEPDEF_BODIES[0]}" == *'run "$command"'* ]]
+  [[ "${STEPDEF_BODIES[1]}" == *'[[ -f "$path" ]]'* ]]
 }
 
 @test "stepdefs_file_parse returns non-zero for an invalid step definition header" {

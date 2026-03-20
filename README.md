@@ -62,25 +62,37 @@ Implemented pieces include:
 - step matching with `{token}` placeholders
 - `Background`, `Scenario`, `Given` / `When` / `Then`, and `And` / `But`
 - doc strings via Gherkin-style `"""` blocks exposed as `DOC_STRING`
-- basic terminal output and scenario summary
+- colored terminal output and scenario summary
+
+### Gherkin Feature Support
+
+| Feature                  | Status      |
+|:-------------------------|:------------|
+| `Feature`                | Supported   |
+| Feature description text | Supported   |
+| `Scenario`               | Supported   |
+| `Background`             | Supported   |
+| `Given`, `When`, `Then`  | Supported   |
+| `And` , `But`            | Supported   |
+| Doc strings (`"""`)      | Supported   |
+| Comments (`#`)           | Supported   |
+| `Rule`                   | Unsupported |
+| `Scenario Outline`       | Unsupported |
+| `Examples`               | Unsupported |
+| Data tables              | Unsupported |
+| Tags (`@tag`)            | Unsupported |
+| `*` step keyword         | Unsupported |
 
 ## Usage
 
-Run all repo features:
-
 ```bash
+# Run all repo features:
 shellkin test
-```
 
-Run a specific directory:
-
-```bash
+# Run a specific directory:
 shellkin test path/to/features
-```
 
-Run a single feature file:
-
-```bash
+# Run a single feature file:
 shellkin test path/to/features/example.feature
 ```
 
@@ -97,6 +109,78 @@ features/
 
 - Feature files live in the target directory.
 - Step definitions live in `step_definitions/` under that same directory.
+
+## Step Definitions
+
+Step definitions are shell snippets declared in files under
+`step_definitions/`.
+
+```bash
+@When I run '{command}'
+run "$command"
+
+@Then the output should include '{text}'
+[[ "$LAST_STDOUT" == *"$text"* ]]
+```
+
+Each step definition starts with a header line:
+
+```text
+@Given ...
+@When ...
+@Then ...
+```
+
+The lines that follow are the step body and are executed when the step
+matches.
+
+Definition headers can use named tokens in braces. When a step matches, each
+token becomes an exported shell variable available to the body:
+
+```bash
+@Then the file '{path}' should exist
+[[ -f "$path" ]]
+```
+
+Token names must start with a letter or underscore, and may contain letters,
+numbers, and underscores.
+
+Each definition continues until the next step header or the end of the file.
+
+## Step Helper
+
+Shellkin currently provides one built-in helper for step definitions:
+
+### `run`
+
+Use `run` to execute a shell command while capturing its result for later
+assertions.
+
+```bash
+@When I run '{command}'
+run "$command"
+```
+
+`run` always returns success, even if the command fails. Inspect the captured
+result through the environment variables described below.
+
+## Step Environment
+
+Shellkin exposes these variables to step definition bodies:
+
+| Variable         | Meaning                                                |
+|:-----------------|:-------------------------------------------------------|
+| `LAST_EXIT_CODE` | Exit status captured by the most recent `run` call     |
+| `LAST_STDOUT`    | Standard output captured by the most recent `run` call |
+| `LAST_STDERR`    | Standard error captured by the most recent `run` call  |
+| `DOC_STRING`     | Doc string attached to the current step, if any        |
+
+Example:
+
+```bash
+@Then the output should match
+[[ "$LAST_STDOUT" == "$DOC_STRING" ]]
+```
 
 ## Uninstalling
 
