@@ -512,6 +512,9 @@ step_run() {
   local body
   local -a tokens=()
 
+  FAIL_MESSAGE=
+  export FAIL_MESSAGE
+
   for i in "${!STEPDEF_TYPES[@]}"; do
     step_type=${STEPDEF_TYPES[$i]}
     [[ $step_type == "$type" ]] || continue
@@ -694,6 +697,13 @@ stepdef_parse() {
   STEPDEF_TOKENS=$(pattern_tokens "$pattern")
 
   return 0
+}
+
+# src/lib/user_helpers/fail.sh
+fail() {
+  FAIL_MESSAGE=${1-}
+  export FAIL_MESSAGE
+  return 1
 }
 
 # src/lib/user_helpers/run.sh

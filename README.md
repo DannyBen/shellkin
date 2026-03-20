@@ -147,9 +147,9 @@ numbers, and underscores.
 
 Each definition continues until the next step header or the end of the file.
 
-## Step Helper
+## Step Helpers
 
-Shellkin currently provides one built-in helper for step definitions:
+Shellkin currently provides these built-in helpers for step definitions:
 
 ### `run`
 
@@ -163,6 +163,15 @@ run "$command"
 
 `run` always returns success, even if the command fails. Inspect the captured
 result through the environment variables described below.
+
+### `fail`
+
+Use `fail` to fail the current step with an optional custom message.
+
+```bash
+@Then the output should include '{text}'
+[[ "$LAST_STDOUT" == *"$text"* ]] || fail "invalid output detected"
+```
 
 ## Step Environment
 

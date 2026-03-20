@@ -6,7 +6,7 @@ setup() {
   setup_test_environment
 
   eval "$(declare -f run | sed '1s/^run /bats_run /')"
-  source_libs syntax/pattern syntax/stepdef user_helpers/run runtime/step
+  source_libs syntax/pattern syntax/stepdef user_helpers/run user_helpers/fail runtime/step
 
   STEPDEF_TYPES=()
   STEPDEF_PATTERNS=()
@@ -17,11 +17,12 @@ setup() {
   LAST_EXIT_CODE=
   LAST_STDOUT=
   LAST_STDERR=
+  FAIL_MESSAGE=
   STEP_RESULT=
 }
 
 teardown() {
-  unset_functions _pattern_escape_literal pattern_regex pattern_tokens stepdef_type_valid stepdef_parse stepdef_register run step_run
+  unset_functions _pattern_escape_literal pattern_regex pattern_tokens stepdef_type_valid stepdef_parse stepdef_register run fail step_run
   teardown_test_environment
 }
 
@@ -61,4 +62,13 @@ teardown() {
   bats_run step_run Then "the command should fail"
 
   [ "$status" -eq 7 ]
+}
+
+@test "step_run exposes a custom failure message from fail" {
+  stepdef_parse "@Then the output should include '{text}'"
+  stepdef_register 'fail "invalid output detected"'
+
+  ! step_run Then "the output should include 'hello'"
+
+  [ "$FAIL_MESSAGE" = "invalid output detected" ]
 }

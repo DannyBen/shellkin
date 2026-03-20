@@ -7,6 +7,9 @@ step_run() {
   local body
   local -a tokens=()
 
+  FAIL_MESSAGE=
+  export FAIL_MESSAGE
+
   for i in "${!STEPDEF_TYPES[@]}"; do
     step_type=${STEPDEF_TYPES[$i]}
     [[ $step_type == "$type" ]] || continue
