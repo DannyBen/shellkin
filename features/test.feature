@@ -19,6 +19,14 @@ Scenario: Running a single feature file
    And the output should include '1 scenario, 0 failing'
    And the exit code should mean success
 
+Scenario: Running a feature that uses the star step keyword
+  When I run 'shellkin test features/fixtures/selective/star_step.feature'
+  Then the output should include 'Feature: star step keyword'
+  And the output should include 'When I run'
+  And the output should include '* I run'
+  And the output should include '1 scenario, 0 failing'
+  And the exit code should mean success
+
 Scenario: Continuing to the next scenario after a failure by default
   When I run 'shellkin test features/fixtures/selective/continue_after_failure.feature'
   Then the output should include 'Scenario: first fails'

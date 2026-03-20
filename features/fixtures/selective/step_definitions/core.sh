@@ -1,3 +1,7 @@
+@Given I am in a temp directory
+TEMP_DIR=$(mktemp -d)
+cd "$TEMP_DIR"
+
 @When I fail deliberately
 false
 
@@ -12,6 +16,9 @@ PATH="$(pwd):$PATH" run "$command"
 
 @Then the output should match
 [[ "$LAST_STDOUT" == "$DOC_STRING" ]]
+
+@Then the file '{path}' should exist
+[[ -f "$path" ]]
 
 @Then I announce '{text}'
 printf '%s' "$text"

@@ -20,7 +20,7 @@ Shellkin currently supports these Gherkin keywords:
 .IP \(bu 2
 \f[B]Given\f[R], \f[B]When\f[R], \f[B]Then\f[R]
 .IP \(bu 2
-\f[B]And\f[R], \f[B]But\f[R]
+\f[B]And\f[R], \f[B]But\f[R], \f[B]*\f[R]
 .SH FORMAT
 .SS Feature Header
 Each feature file starts with a \f[B]Feature:\f[R] header.
@@ -53,7 +53,7 @@ Background:
 .EE
 .SS Steps
 Supported step keywords are \f[B]Given\f[R], \f[B]When\f[R],
-\f[B]Then\f[R], \f[B]And\f[R], and \f[B]But\f[R].
+\f[B]Then\f[R], \f[B]And\f[R], \f[B]But\f[R], and \f[B]*\f[R].
 .IP
 .EX
 Scenario: Touch a file
@@ -62,14 +62,26 @@ Scenario: Touch a file
   Then the file \(aqsomefile\(aq should exist
 .EE
 .PP
-\f[B]And\f[R] and \f[B]But\f[R] reuse the semantic type of the previous
-step.
+\f[B]And\f[R], \f[B]But\f[R], and \f[B]*\f[R] reuse the semantic type of
+the previous step.
 .IP
 .EX
 Scenario: Run command
   When I run \(aqshellkin \-\-help\(aq
   And the exit code should mean success
 .EE
+.IP
+.EX
+Scenario: Prepare files
+  Given I am in a temp directory
+  When I run \(aqtouch one\(aq
+  * I run \(aqtouch two\(aq
+  Then the file \(aqone\(aq should exist
+  And the file \(aqtwo\(aq should exist
+.EE
+.PP
+Like \f[B]And\f[R] and \f[B]But\f[R], the \f[B]*\f[R] keyword cannot be
+the first step in a scenario or background.
 .SH COMMENTS AND BLANK LINES
 Blank lines are ignored.
 .PP
@@ -107,8 +119,6 @@ The following common Gherkin constructs are not currently supported:
 data tables
 .IP \(bu 2
 tags such as \f[B]\(atslow\f[R]
-.IP \(bu 2
-the \f[B]*\f[R] step keyword
 .SH EXAMPLE
 .IP
 .EX

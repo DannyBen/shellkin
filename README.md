@@ -61,7 +61,7 @@ Implemented pieces include:
 - feature discovery from a directory or a single `.feature` file
 - step definition loading from `step_definitions/*.sh` and `*.bash`
 - step matching with `{token}` placeholders
-- `Background`, `Scenario`, `Given` / `When` / `Then`, and `And` / `But`
+- `Background`, `Scenario`, `Given` / `When` / `Then`, `And` / `But`, and `*`
 - doc strings via Gherkin-style `"""` blocks exposed as `DOC_STRING`
 - colored terminal output and scenario summary
 
@@ -75,6 +75,7 @@ Implemented pieces include:
 | `Background`             | Supported   |
 | `Given`, `When`, `Then`  | Supported   |
 | `And` , `But`            | Supported   |
+| `*` step keyword         | Supported   |
 | Doc strings (`"""`)      | Supported   |
 | Comments (`#`)           | Supported   |
 | `Rule`                   | Unsupported |
@@ -82,7 +83,6 @@ Implemented pieces include:
 | `Examples`               | Unsupported |
 | Data tables              | Unsupported |
 | Tags (`@tag`)            | Unsupported |
-| `*` step keyword         | Unsupported |
 
 ## Usage
 

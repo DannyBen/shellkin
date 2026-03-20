@@ -33,6 +33,14 @@ teardown() {
   [ "$FEATURE_STEP_TEXT" = "I run 'touch somefile'" ]
 }
 
+@test "feature_line_parse recognizes a star step line" {
+  feature_line_parse "* I run 'touch somefile'"
+
+  [ "$FEATURE_LINE_KIND" = "step" ]
+  [ "$FEATURE_STEP_TYPE" = "*" ]
+  [ "$FEATURE_STEP_TEXT" = "I run 'touch somefile'" ]
+}
+
 @test "feature_line_parse classifies blank lines" {
   feature_line_parse ""
 
@@ -65,7 +73,7 @@ teardown() {
   [ "$output" = "Then" ]
 }
 
-@test "feature_step_type_resolve reuses the previous type for And and But" {
+@test "feature_step_type_resolve reuses the previous type for And But and star" {
   run feature_step_type_resolve Then And
   [ "$status" -eq 0 ]
   [ "$output" = "Then" ]
@@ -73,10 +81,18 @@ teardown() {
   run feature_step_type_resolve When But
   [ "$status" -eq 0 ]
   [ "$output" = "When" ]
+
+  run feature_step_type_resolve Given "*"
+  [ "$status" -eq 0 ]
+  [ "$output" = "Given" ]
 }
 
-@test "feature_step_type_resolve rejects And and But as the first step" {
+@test "feature_step_type_resolve rejects And But and star as the first step" {
   run feature_step_type_resolve "" And
+
+  [ "$status" -eq 1 ]
+
+  run feature_step_type_resolve "" "*"
 
   [ "$status" -eq 1 ]
 }

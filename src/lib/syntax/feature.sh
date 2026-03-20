@@ -35,7 +35,7 @@ feature_line_parse() {
     return 0
   fi
 
-  if [[ $line =~ ^(Given|When|Then|And|But)[[:space:]]+(.+)$ ]]; then
+  if [[ $line =~ ^(Given|When|Then|And|But|\*)[[:space:]]+(.+)$ ]]; then
     FEATURE_LINE_KIND=step
     FEATURE_STEP_TYPE=${BASH_REMATCH[1]}
     FEATURE_STEP_TEXT=${BASH_REMATCH[2]}
@@ -56,7 +56,7 @@ feature_step_type_resolve() {
   local current_type=$2
 
   case $current_type in
-    And | But)
+    And | But | '*')
       [[ -n $previous_type ]] || return 1
       printf '%s' "$previous_type"
       ;;

@@ -25,7 +25,7 @@ Shellkin currently supports these Gherkin keywords:
 - **Background**
 - **Scenario**
 - **Given**, **When**, **Then**
-- **And**, **But**
+- **And**, **But**, **\***
 
 FORMAT
 ==================================================
@@ -74,8 +74,8 @@ Background:
 Steps
 --------------------------------------------------
 
-Supported step keywords are **Given**, **When**, **Then**, **And**, and
-**But**.
+Supported step keywords are **Given**, **When**, **Then**, **And**, **But**,
+and **\***.
 
 ```gherkin
 Scenario: Touch a file
@@ -84,13 +84,25 @@ Scenario: Touch a file
   Then the file 'somefile' should exist
 ```
 
-**And** and **But** reuse the semantic type of the previous step.
+**And**, **But**, and **\*** reuse the semantic type of the previous step.
 
 ```gherkin
 Scenario: Run command
   When I run 'shellkin --help'
   And the exit code should mean success
 ```
+
+```gherkin
+Scenario: Prepare files
+  Given I am in a temp directory
+  When I run 'touch one'
+  * I run 'touch two'
+  Then the file 'one' should exist
+  And the file 'two' should exist
+```
+
+Like **And** and **But**, the **\*** keyword cannot be the first step in a
+scenario or background.
 
 COMMENTS AND BLANK LINES
 ==================================================
@@ -132,7 +144,6 @@ The following common Gherkin constructs are not currently supported:
 - **Examples**
 - data tables
 - tags such as **@slow**
-- the **\*** step keyword
 
 EXAMPLE
 ==================================================
