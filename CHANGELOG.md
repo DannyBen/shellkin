@@ -1,6 +1,20 @@
 Changelog
 ========================================
 
+v0.1.2 - 2026-03-21
+----------------------------------------
+
+- Add `--fail-fast` [`7571901`](https://github.com/DannyBen/shellkin/commit/7571901)
+- Expand acceptance tests [`a87ec04`](https://github.com/DannyBen/shellkin/commit/a87ec04)
+- Add validate command [`56752a1`](https://github.com/DannyBen/shellkin/commit/56752a1)
+- Add support for star step [`5a6874e`](https://github.com/DannyBen/shellkin/commit/5a6874e)
+- Add `defer` helper for step cleanup [`603ad5c`](https://github.com/DannyBen/shellkin/commit/603ad5c)
+- Output FAIL_MESSAGE on missing stepdef or defer failure [`8f06d48`](https://github.com/DannyBen/shellkin/commit/8f06d48)
+- Add agent skill [`f42233c`](https://github.com/DannyBen/shellkin/commit/f42233c)
+- Add step definitions support file [`8e12a0a`](https://github.com/DannyBen/shellkin/commit/8e12a0a)
+- Compare [`v0.1.1..v0.1.2`](https://github.com/DannyBen/shellkin/compare/v0.1.1..v0.1.2)
+
+
 v0.1.1 - 2026-03-20
 ----------------------------------------
 
