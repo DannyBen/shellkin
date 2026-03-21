@@ -1,0 +1,7 @@
+interface:
+  display_name: "Shellkin"
+  short_description: "Author feature tests with Shellkin"
+  default_prompt: "Use $shellkin to add or revise Shellkin feature tests for this Bash project."
+
+policy:
+  allow_implicit_invocation: true

@@ -109,6 +109,31 @@ and are not executed.
 Use `shellkin validate` to check feature structure and step-definition matching
 without running any step bodies.
 
+## AI Agent Skill
+
+This repository also provides a Codex skill for AI agents that need to write
+Shellkin tests in user projects.
+
+### Install in Codex
+
+Use the built-in installer skill.
+
+In Codex chat, use this prompt:
+
+```text
+install the skill from https://github.com/DannyBen/shellkin/tree/main/skills/shellkin
+(master branch)
+```
+
+### Install in Claude Code
+
+Claude Code supports project and user skill locations:
+
+- Project skill: `.claude/skills/shellkin/SKILL.md`
+- User skill: `~/.claude/skills/shellkin/SKILL.md`
+
+Copy `skills/shellkin` from this repo into one of those locations.
+
 ## Features Directory Layout
 
 Shellkin expects this structure:
