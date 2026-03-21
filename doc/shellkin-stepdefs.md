@@ -46,8 +46,10 @@ The step body is plain shell code.
 
 ```bash
 @When I run '{command}'
-run "$command"
+  run "$command"
 ```
+
+Indenting the body is recommended for readability, but optional.
 
 Each definition continues until the next valid step header or the end of the
 file.
@@ -59,7 +61,7 @@ Patterns may contain named tokens in braces.
 
 ```bash
 @Then the file '{path}' should exist
-[[ -f "$path" ]]
+  [[ -f "$path" ]]
 ```
 
 When the step matches, each token is exported as a shell variable for use in
@@ -78,7 +80,7 @@ Run a shell command and capture its result for later assertions.
 
 ```bash
 @When I run '{command}'
-run "$command"
+  run "$command"
 ```
 
 The **run** helper always returns success, even when the command fails.
@@ -90,7 +92,7 @@ Fail the current step with an optional custom message.
 
 ```bash
 @Then the output should include '{text}'
-[[ "$LAST_STDOUT" == *"$text"* ]] || fail "invalid output detected"
+  [[ "$LAST_STDOUT" == *"$text"* ]] || fail "invalid output detected"
 ```
 
 defer
@@ -100,11 +102,11 @@ Register cleanup code to run when the current scenario finishes.
 
 ```bash
 @Given I am in a temp directory
-old_pwd=$PWD
-temp_dir=$(mktemp -d)
-cd "$temp_dir"
-defer cd "$old_pwd"
-defer rm -rf "$temp_dir"
+  old_pwd=$PWD
+  temp_dir=$(mktemp -d)
+  cd "$temp_dir"
+  defer cd "$old_pwd"
+  defer rm -rf "$temp_dir"
 ```
 
 Deferred actions are scoped to the current scenario. They run after both
@@ -137,7 +139,7 @@ Then the output should match
 
 ```bash
 @Then the output should match
-[[ "$LAST_STDOUT" == "$DOC_STRING" ]]
+  [[ "$LAST_STDOUT" == "$DOC_STRING" ]]
 ```
 
 EXAMPLE
@@ -153,16 +155,16 @@ temp_workspace() {
 
 ```bash
 @Given I am in a temp directory
-old_pwd=$PWD
-temp_workspace
-defer cd "$old_pwd"
-defer rm -rf "$temp_dir"
+  old_pwd=$PWD
+  temp_workspace
+  defer cd "$old_pwd"
+  defer rm -rf "$temp_dir"
 
 @When I run '{command}'
-run "$command"
+  run "$command"
 
 @Then the file '{path}' should exist
-[[ -f "$path" ]]
+  [[ -f "$path" ]]
 ```
 
 SEE ALSO

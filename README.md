@@ -21,11 +21,13 @@ and back them with shell step definitions:
 
 ```bash
 @When I run '{command}'
-run "$command"
+  run "$command"
 
 @Then the output should include '{text}'
-[[ "$LAST_STDOUT" == *"$text"* ]]
+  [[ "$LAST_STDOUT" == *"$text"* ]]
 ```
+
+Indenting the step body is recommended for readability, but optional.
 
 ## Install
 
@@ -166,10 +168,10 @@ loads step definitions. You can rename it with `SHELLKIN_SUPPORT_FILE`.
 
 ```bash
 @When I run '{command}'
-run "$command"
+  run "$command"
 
 @Then the output should include '{text}'
-[[ "$LAST_STDOUT" == *"$text"* ]]
+  [[ "$LAST_STDOUT" == *"$text"* ]]
 ```
 
 Each step definition starts with a header line:
@@ -182,13 +184,14 @@ Each step definition starts with a header line:
 
 The lines that follow are the step body and are executed when the step
 matches.
+Indenting the body is recommended for readability, but optional.
 
 Definition headers can use named tokens in braces. When a step matches, each
 token becomes an exported shell variable available to the body:
 
 ```bash
 @Then the file '{path}' should exist
-[[ -f "$path" ]]
+  [[ -f "$path" ]]
 ```
 
 Token names must start with a letter or underscore, and may contain letters,
@@ -207,7 +210,7 @@ assertions.
 
 ```bash
 @When I run '{command}'
-run "$command"
+  run "$command"
 ```
 
 `run` always returns success, even if the command fails. Inspect the captured
@@ -219,7 +222,7 @@ Use `fail` to fail the current step with an optional custom message.
 
 ```bash
 @Then the output should include '{text}'
-[[ "$LAST_STDOUT" == *"$text"* ]] || fail "invalid output detected"
+  [[ "$LAST_STDOUT" == *"$text"* ]] || fail "invalid output detected"
 ```
 
 ### `defer`
@@ -229,11 +232,11 @@ finishes.
 
 ```bash
 @Given I am in a temp directory
-old_pwd=$PWD
-temp_dir=$(mktemp -d)
-cd "$temp_dir"
-defer cd "$old_pwd"
-defer rm -rf "$temp_dir"
+  old_pwd=$PWD
+  temp_dir=$(mktemp -d)
+  cd "$temp_dir"
+  defer cd "$old_pwd"
+  defer rm -rf "$temp_dir"
 ```
 
 Deferred actions are scenario-scoped, run after both passing and failing
@@ -254,8 +257,13 @@ Example:
 
 ```bash
 @Then the output should match
-[[ "$LAST_STDOUT" == "$DOC_STRING" ]]
+  [[ "$LAST_STDOUT" == "$DOC_STRING" ]]
 ```
+
+## Examples
+
+For real-world examples, see this repository's [features](features) directory
+and the [rush features](https://github.com/DannyBen/rush/tree/master/features).
 
 ## Uninstalling
 

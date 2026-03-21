@@ -36,8 +36,10 @@ The step body is plain shell code.
 .IP
 .EX
 \(atWhen I run \(aq{command}\(aq
-run \(dq$command\(dq
+  run \(dq$command\(dq
 .EE
+.PP
+Indenting the body is recommended for readability, but optional.
 .PP
 Each definition continues until the next valid step header or the end of
 the file.
@@ -46,7 +48,7 @@ Patterns may contain named tokens in braces.
 .IP
 .EX
 \(atThen the file \(aq{path}\(aq should exist
-\f[B][[\f[R] \-f \(dq$path\(dq \f[B]]]\f[R]
+  \f[B][[\f[R] \-f \(dq$path\(dq \f[B]]]\f[R]
 .EE
 .PP
 When the step matches, each token is exported as a shell variable for
@@ -60,7 +62,7 @@ Run a shell command and capture its result for later assertions.
 .IP
 .EX
 \(atWhen I run \(aq{command}\(aq
-run \(dq$command\(dq
+  run \(dq$command\(dq
 .EE
 .PP
 The \f[B]run\f[R] helper always returns success, even when the command
@@ -70,18 +72,18 @@ Fail the current step with an optional custom message.
 .IP
 .EX
 \(atThen the output should include \(aq{text}\(aq
-\f[B][[\f[R] \(dq$LAST_STDOUT\(dq == *\(dq$text\(dq* \f[B]]]\f[R] \f[B]||\f[R] fail \(dqinvalid output detected\(dq
+  \f[B][[\f[R] \(dq$LAST_STDOUT\(dq == *\(dq$text\(dq* \f[B]]]\f[R] \f[B]||\f[R] fail \(dqinvalid output detected\(dq
 .EE
 .SS defer
 Register cleanup code to run when the current scenario finishes.
 .IP
 .EX
 \(atGiven I am in a temp directory
-old_pwd=$PWD
-temp_dir=$(mktemp \-d)
-cd \(dq$temp_dir\(dq
-defer cd \(dq$old_pwd\(dq
-defer rm \-rf \(dq$temp_dir\(dq
+  old_pwd=$PWD
+  temp_dir=$(mktemp \-d)
+  cd \(dq$temp_dir\(dq
+  defer cd \(dq$old_pwd\(dq
+  defer rm \-rf \(dq$temp_dir\(dq
 .EE
 .PP
 Deferred actions are scoped to the current scenario.
@@ -117,7 +119,7 @@ Then the output should match
 .IP
 .EX
 \(atThen the output should match
-\f[B][[\f[R] \(dq$LAST_STDOUT\(dq == \(dq$DOC_STRING\(dq \f[B]]]\f[R]
+  \f[B][[\f[R] \(dq$LAST_STDOUT\(dq == \(dq$DOC_STRING\(dq \f[B]]]\f[R]
 .EE
 .SH EXAMPLE
 .IP
@@ -131,16 +133,16 @@ temp_workspace() \f[B]{\f[R]
 .IP
 .EX
 \(atGiven I am in a temp directory
-old_pwd=$PWD
-temp_workspace
-defer cd \(dq$old_pwd\(dq
-defer rm \-rf \(dq$temp_dir\(dq
+  old_pwd=$PWD
+  temp_workspace
+  defer cd \(dq$old_pwd\(dq
+  defer rm \-rf \(dq$temp_dir\(dq
 
 \(atWhen I run \(aq{command}\(aq
-run \(dq$command\(dq
+  run \(dq$command\(dq
 
 \(atThen the file \(aq{path}\(aq should exist
-\f[B][[\f[R] \-f \(dq$path\(dq \f[B]]]\f[R]
+  \f[B][[\f[R] \-f \(dq$path\(dq \f[B]]]\f[R]
 .EE
 .SH SEE ALSO
 \f[B]shellkin\f[R](1), \f[B]shellkin\-test\f[R](1),
