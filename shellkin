@@ -58,6 +58,12 @@ shellkin_usage() {
     printf "    %s\n" "Default: step_definitions"
     echo
 
+    # :environment_variable.usage
+    printf "  %s\n" "$(green "SHELLKIN_SUPPORT_FILE")"
+    printf "    Path to support script for step definitions (relative to features root)\n"
+    printf "    %s\n" "Default: support.sh"
+    echo
+
   fi
 }
 
@@ -777,6 +783,24 @@ stepdefs_file_parse() {
   fi
 }
 
+# src/lib/file/support.sh
+support_file_resolve() {
+  local features_dir=$1
+
+  SUPPORT_FILE="$features_dir/$SHELLKIN_SUPPORT_FILE"
+}
+
+support_file_source() {
+  local features_dir=$1
+
+  support_file_resolve "$features_dir"
+
+  if [[ -f $SUPPORT_FILE ]]; then
+    # shellcheck disable=SC1090
+    source "$SUPPORT_FILE"
+  fi
+}
+
 # src/lib/output/test.sh
 output_feature_start() {
   blue_bold "\nFeature: $1"
@@ -1249,6 +1273,7 @@ shellkin_test_command() {
   # src/commands/test.sh
   target="$(realpath "${args['target']}")"
   stepdefs_dir=
+  support_status=0
   feature_status=0
 
   STEPDEF_TYPES=()
@@ -1270,6 +1295,12 @@ shellkin_test_command() {
   fi
 
   stepdefs_dir="$features_dir/$SHELLKIN_STEPDEFS_ROOT"
+
+  support_file_source "$features_dir" || support_status=1
+
+  if ((support_status != 0)); then
+    return "$support_status"
+  fi
 
   readarray -t stepdef_files < <(find "$stepdefs_dir" -maxdepth 1 -type f \( -name '*.sh' -o -name '*.bash' \) | sort)
 
@@ -1296,6 +1327,7 @@ shellkin_validate_command() {
   # src/commands/validate.sh
   target="$(realpath "${args['target']}")"
   stepdefs_dir=
+  support_status=0
   validation_status=0
   validation_total=0
   validation_failed=0
@@ -1317,6 +1349,13 @@ shellkin_validate_command() {
   stepdefs_dir="$features_dir/$SHELLKIN_STEPDEFS_ROOT"
   VALIDATION_FEATURES_DIR="$features_dir"
   VALIDATION_STEPDEFS_DIR="$stepdefs_dir"
+
+  support_file_source "$features_dir" || support_status=1
+
+  if ((support_status != 0)); then
+    return "$support_status"
+  fi
+
   readarray -t stepdef_files < <(find "$stepdefs_dir" -maxdepth 1 -type f \( -name '*.sh' -o -name '*.bash' \) | sort)
 
   for stepdef_file in "${stepdef_files[@]}"; do
@@ -1390,6 +1429,7 @@ parse_requirements() {
   # :command.environment_variables_default
   export SHELLKIN_FEATURES_ROOT="${SHELLKIN_FEATURES_ROOT:-features}"
   export SHELLKIN_STEPDEFS_ROOT="${SHELLKIN_STEPDEFS_ROOT:-step_definitions}"
+  export SHELLKIN_SUPPORT_FILE="${SHELLKIN_SUPPORT_FILE:-support.sh}"
 
   # :command.command_filter
   action=${1:-}
@@ -1589,6 +1629,7 @@ initialize() {
   # :command.environment_variables_default
   export SHELLKIN_FEATURES_ROOT="${SHELLKIN_FEATURES_ROOT:-features}"
   export SHELLKIN_STEPDEFS_ROOT="${SHELLKIN_STEPDEFS_ROOT:-step_definitions}"
+  export SHELLKIN_SUPPORT_FILE="${SHELLKIN_SUPPORT_FILE:-support.sh}"
 
 }
 

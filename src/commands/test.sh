@@ -1,5 +1,6 @@
 target="$(realpath "${args['target']}")"
 stepdefs_dir=
+support_status=0
 feature_status=0
 
 STEPDEF_TYPES=()
@@ -21,6 +22,12 @@ else
 fi
 
 stepdefs_dir="$features_dir/$SHELLKIN_STEPDEFS_ROOT"
+
+support_file_source "$features_dir" || support_status=1
+
+if ((support_status != 0)); then
+  return "$support_status"
+fi
 
 readarray -t stepdef_files < <(find "$stepdefs_dir" -maxdepth 1 -type f \( -name '*.sh' -o -name '*.bash' \) | sort)
 

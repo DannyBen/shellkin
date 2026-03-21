@@ -72,6 +72,41 @@ EOF
   assert_output_contains "1 scenario, 0 failing"
 }
 
+@test "shellkin test sources the configured support file before running steps" {
+  write_file custom_features/sample.feature <<'EOF'
+Feature: Create a file
+
+Scenario: Touch a file
+  Given I am in a prepared temp directory
+  When I run 'touch somefile'
+  Then the file 'somefile' should exist
+EOF
+
+  write_file custom_features/helpers.sh <<'EOF'
+prepare_temp_dir() {
+  TEMP_DIR=$(mktemp -d)
+  cd "$TEMP_DIR"
+}
+EOF
+
+  write_file custom_features/step_definitions/core.sh <<'EOF'
+@Given I am in a prepared temp directory
+prepare_temp_dir
+
+@When I run '{command}'
+run "$command"
+
+@Then the file '{path}' should exist
+[[ -f "$path" ]]
+EOF
+
+  run env SHELLKIN_SUPPORT_FILE=helpers.sh "$SHELLKIN_REPO_ROOT/shellkin" test "$TEST_ROOT/custom_features"
+
+  [ "$status" -eq 0 ]
+  assert_output_contains "Feature: Create a file"
+  assert_output_contains "1 scenario, 0 failing"
+}
+
 @test "shellkin test --fail-fast stops after the first failing scenario" {
   write_file features/sample.feature <<'EOF'
 Feature: Fail fast

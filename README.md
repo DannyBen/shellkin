@@ -59,6 +59,7 @@ through the repository `features/` directory.
 Implemented pieces include:
 
 - feature discovery from a directory or a single `.feature` file
+- optional support script loading from `support.sh`
 - step definition loading from `step_definitions/*.sh` and `*.bash`
 - step matching with `{token}` placeholders
 - `Background`, `Scenario`, `Given` / `When` / `Then`, `And` / `But`, and `*`
@@ -140,18 +141,26 @@ Shellkin expects this structure:
 
 ```text
 features/
+├── support.sh
 ├── step_definitions/
 │   └── core.sh
 └── example.feature
 ```
 
 - Feature files live in the target directory.
+- If present, `support.sh` is sourced before step definitions are loaded.
 - Step definitions live in `step_definitions/` under that same directory.
+- Set `SHELLKIN_SUPPORT_FILE` to change the support script name relative to the
+  features directory.
 
 ## Step Definitions
 
 Step definitions are shell snippets declared in files under
 `step_definitions/`.
+
+To share helper functions across step definition files, place them in
+`support.sh` in the features directory. Shellkin sources this file before it
+loads step definitions. You can rename it with `SHELLKIN_SUPPORT_FILE`.
 
 ```bash
 @When I run '{command}'

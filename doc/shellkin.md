@@ -49,6 +49,13 @@ Path to step definitions directory (relative to features root)
 
 - Default Value: **step_definitions**
 
+SHELLKIN_SUPPORT_FILE
+--------------------------------------------------
+
+Path to support script for step definitions (relative to features root)
+
+- Default Value: **support.sh**
+
 SEE ALSO
 ==================================================
 

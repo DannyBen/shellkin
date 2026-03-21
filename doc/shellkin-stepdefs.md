@@ -13,6 +13,10 @@ DESCRIPTION
 Shellkin step definitions are shell code files loaded from the configured step
 definitions directory under the selected features root.
 
+If present, the support file is sourced before step definitions are loaded. By
+default this file is **support.sh** in the features directory. Use
+**SHELLKIN_SUPPORT_FILE** to change its name relative to that directory.
+
 Each step definition starts with a header line beginning with one of:
 
 - **@Given**
@@ -140,10 +144,17 @@ EXAMPLE
 ==================================================
 
 ```bash
+# features/support.sh
+temp_workspace() {
+  temp_dir=$(mktemp -d)
+  cd "$temp_dir"
+}
+```
+
+```bash
 @Given I am in a temp directory
 old_pwd=$PWD
-temp_dir=$(mktemp -d)
-cd "$temp_dir"
+temp_workspace
 defer cd "$old_pwd"
 defer rm -rf "$temp_dir"
 

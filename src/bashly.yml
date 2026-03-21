@@ -2,19 +2,6 @@ name: shellkin
 help: Gherkin-style BDD Test Framework for Bash Scripts
 version: 0.1.1
 
-x_mandoc_authors: Danny Ben Shitrit <https://github.com/dannyben>
-x_mandoc_see_also: &alf-conf-man
-  - shellkin-stepdefs(5)
-  - shellkin-feature(5)
-x_mandoc_footer: |-
-  # SOURCE CODE
-
-  https://github.com/dannyben/shellkin
-
-  # ISSUE TRACKER
-  
-  https://github.com/dannyben/shellkin/issues
-
 environment_variables:
 - name: shellkin_features_root
   help: Path to features directory (relative to working directory)
@@ -22,6 +9,9 @@ environment_variables:
 - name: shellkin_stepdefs_root
   help: Path to step definitions directory (relative to features root)
   default: step_definitions
+- name: shellkin_support_file
+  help: Path to support script for step definitions (relative to features root)
+  default: support.sh
 
 commands:
 - name: test
@@ -45,3 +35,19 @@ commands:
   alias: v
   help: Validate feature files and step definition files
   args: [*args_target]
+
+
+# Manpages Extras
+
+x_mandoc_authors: Danny Ben Shitrit <https://github.com/dannyben>
+x_mandoc_see_also: &alf-conf-man
+  - shellkin-stepdefs(5)
+  - shellkin-feature(5)
+x_mandoc_footer: |-
+  # SOURCE CODE
+
+  https://github.com/dannyben/shellkin
+
+  # ISSUE TRACKER
+  
+  https://github.com/dannyben/shellkin/issues
