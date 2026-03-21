@@ -1623,7 +1623,7 @@ shellkin_validate_parse_requirements() {
 
 # :command.initialize
 initialize() {
-  declare -g version="0.1.1"
+  declare -g version="0.1.2"
   set -eo pipefail
 
   # :command.environment_variables_default

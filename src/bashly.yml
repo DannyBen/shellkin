@@ -1,6 +1,6 @@
 name: shellkin
 help: Gherkin-style BDD Test Framework for Bash Scripts
-version: 0.1.1
+version: 0.1.2
 
 environment_variables:
 - name: shellkin_features_root
