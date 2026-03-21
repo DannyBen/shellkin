@@ -54,5 +54,7 @@ step_run() {
     fi
   done
 
+  FAIL_MESSAGE="no matching step definition for: $type $text"
+  export FAIL_MESSAGE
   return 1
 }

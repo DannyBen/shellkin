@@ -27,7 +27,10 @@ teardown_test_environment() {
 
 assert_output_contains() {
   local expected="$1"
-  [[ "${output-}" == *"$expected"* ]]
+  local plain_output
+
+  plain_output=$(printf '%s' "${output-}" | strip_ansi)
+  [[ $plain_output == *"$expected"* ]]
 }
 
 strip_ansi() {

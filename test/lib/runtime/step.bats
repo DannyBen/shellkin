@@ -49,9 +49,8 @@ teardown() {
   stepdef_parse "@When I run '{command}'"
   stepdef_register 'run "$command"'
 
-  bats_run step_run Then "the file 'somefile' should exist"
-
-  [ "$status" -eq 1 ]
+  ! step_run Then "the file 'somefile' should exist"
+  [ "$FAIL_MESSAGE" = "no matching step definition for: Then the file 'somefile' should exist" ]
 }
 
 @test "step_run returns the body status when the body fails" {

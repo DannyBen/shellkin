@@ -360,7 +360,14 @@ feature_run() {
   done <"$feature_file"
 
   if ((failed == 0 && scenario_seen != 0)); then
-    feature_scenario_run "$FEATURE_SCENARIO_NAME" background_steps scenario_steps || failed=1
+    if feature_scenario_run "$FEATURE_SCENARIO_NAME" background_steps scenario_steps; then
+      :
+    else
+      failed=1
+      if ((TEST_FAIL_FAST != 0)); then
+        TEST_ABORT_RUN=1
+      fi
+    fi
   elif ((scenario_seen != 0)); then
     if feature_scenario_run "$FEATURE_SCENARIO_NAME" background_steps scenario_steps; then
       :
@@ -664,6 +671,7 @@ feature_scenario_run() {
     :
   else
     scenario_failed=1
+    output_deferred_failure
   fi
   set -e
 
@@ -838,6 +846,11 @@ output_step_skipped() {
   cyan "  - $type $text (skipped)"
 }
 
+output_deferred_failure() {
+  red "  ✗ Deferred cleanup"
+  output_failure_block "FAIL_MESSAGE" "${FAIL_MESSAGE:-}"
+}
+
 output_summary() {
   local total_scenarios=$1
   local failed_scenarios=$2
@@ -984,6 +997,8 @@ step_run() {
     fi
   done
 
+  FAIL_MESSAGE="no matching step definition for: $type $text"
+  export FAIL_MESSAGE
   return 1
 }
 
@@ -1167,14 +1182,19 @@ defer__run_command() {
 defer__run_all() {
   local index
   local deferred_command
-  local status=0
 
   for ((index=${#SCENARIO_DEFERRED_COMMANDS[@]} - 1; index >= 0; index--)); do
     deferred_command=${SCENARIO_DEFERRED_COMMANDS[$index]}
-    defer__run_command "$deferred_command" || status=1
+    if defer__run_command "$deferred_command"; then
+      :
+    else
+      FAIL_MESSAGE="deferred action failed: $deferred_command"
+      export FAIL_MESSAGE
+      return 1
+    fi
   done
 
-  return "$status"
+  return 0
 }
 
 # src/lib/user_helpers/fail.sh

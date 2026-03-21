@@ -262,6 +262,60 @@ EOF
   assert_output_contains "boom"
 }
 
+@test "feature_run prints a missing step definition message for an unmatched step" {
+  write_file stepdefs.sh <<'EOF'
+@When I run '{command}'
+run "$command"
+EOF
+
+  write_file test.feature <<'EOF'
+Feature: Missing step definition
+
+Scenario: Show unmatched step
+  When I run 'printf hello'
+  Then I do not exist
+EOF
+
+  stepdefs_file_parse "$TEST_ROOT/stepdefs.sh"
+  if feature_run "$TEST_ROOT/test.feature" >"$TEST_ROOT/output.txt"; then
+    status=0
+  else
+    status=$?
+  fi
+
+  [ "$status" -eq 1 ]
+  output=$(strip_ansi <"$TEST_ROOT/output.txt")
+  assert_output_contains "FAIL_MESSAGE:"
+  assert_output_contains "no matching step definition for: Then I do not exist"
+}
+
+@test "feature_run prints a deferred failure message when cleanup fails" {
+  write_file stepdefs.sh <<'EOF'
+@Given I register a failing deferred action
+defer 'return 1'
+EOF
+
+  write_file test.feature <<'EOF'
+Feature: Deferred cleanup failure
+
+Scenario: Show deferred failure
+  Given I register a failing deferred action
+EOF
+
+  stepdefs_file_parse "$TEST_ROOT/stepdefs.sh"
+  if feature_run "$TEST_ROOT/test.feature" >"$TEST_ROOT/output.txt"; then
+    status=0
+  else
+    status=$?
+  fi
+
+  [ "$status" -eq 1 ]
+  output=$(strip_ansi <"$TEST_ROOT/output.txt")
+  assert_output_contains "✗ Deferred cleanup"
+  assert_output_contains "FAIL_MESSAGE:"
+  assert_output_contains "deferred action failed: return 1"
+}
+
 @test "feature_run sets abort state when fail-fast is enabled and a scenario fails" {
   write_file stepdefs.sh <<'EOF'
 @When I fail
@@ -295,4 +349,31 @@ EOF
   [ "$TEST_ABORT_RUN" -eq 1 ]
   [ "$TEST_SCENARIOS_TOTAL" -eq 1 ]
   [ ! -e "$TEST_ROOT/should-not-exist" ]
+}
+
+@test "feature_run sets abort state when fail-fast is enabled and the final scenario fails at end of file" {
+  write_file stepdefs.sh <<'EOF'
+@When I fail
+return 1
+EOF
+
+  write_file test.feature <<'EOF'
+Feature: Fail fast at end of file
+
+Scenario: Only
+  When I fail
+EOF
+
+  stepdefs_file_parse "$TEST_ROOT/stepdefs.sh"
+  TEST_FAIL_FAST=1
+
+  if feature_run "$TEST_ROOT/test.feature" >"$TEST_ROOT/output.txt"; then
+    status=0
+  else
+    status=$?
+  fi
+
+  [ "$status" -eq 1 ]
+  [ "$TEST_ABORT_RUN" -eq 1 ]
+  [ "$TEST_SCENARIOS_TOTAL" -eq 1 ]
 }

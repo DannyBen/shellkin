@@ -66,6 +66,11 @@ output_step_skipped() {
   cyan "  - $type $text (skipped)"
 }
 
+output_deferred_failure() {
+  red "  ✗ Deferred cleanup"
+  output_failure_block "FAIL_MESSAGE" "${FAIL_MESSAGE:-}"
+}
+
 output_summary() {
   local total_scenarios=$1
   local failed_scenarios=$2

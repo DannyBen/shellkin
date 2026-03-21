@@ -105,6 +105,37 @@ EOF
   assert_output_contains "1 scenario, 0 passing, 1 failing"
 }
 
+@test "shellkin test --fail-fast stops before later feature files when the first file ends with a failing scenario" {
+  write_file features/01-first.feature <<'EOF'
+Feature: First
+
+Scenario: Only
+  When I fail
+EOF
+
+  write_file features/02-second.feature <<'EOF'
+Feature: Second
+
+Scenario: Should not run
+  Then I should not run
+EOF
+
+  write_file features/step_definitions/core.sh <<'EOF'
+@When I fail
+return 1
+
+@Then I should not run
+touch "$TEST_ROOT/second-feature-ran"
+EOF
+
+  run "$SHELLKIN_REPO_ROOT/shellkin" test --fail-fast "$TEST_ROOT/features"
+
+  [ "$status" -eq 1 ]
+  [ ! -e "$TEST_ROOT/second-feature-ran" ]
+  [[ "$output" != *"Feature: Second"* ]]
+  assert_output_contains "1 scenario, 0 passing, 1 failing"
+}
+
 @test "shellkin test runs deferred cleanup after a failing scenario" {
   write_file features/sample.feature <<'EOF'
 Feature: Deferred cleanup
@@ -130,4 +161,45 @@ EOF
   [ "$status" -eq 1 ]
   [ ! -e "$path" ]
   assert_output_contains "1 scenario, 0 passing, 1 failing"
+}
+
+@test "shellkin test reports a deferred cleanup failure during execution" {
+  write_file features/sample.feature <<'EOF'
+Feature: Deferred cleanup failure
+
+Scenario: Show deferred failure
+  Given I register a failing deferred action
+EOF
+
+  write_file features/step_definitions/core.sh <<'EOF'
+@Given I register a failing deferred action
+defer 'return 1'
+EOF
+
+  run "$SHELLKIN_REPO_ROOT/shellkin" test "$TEST_ROOT/features"
+
+  [ "$status" -eq 1 ]
+  assert_output_contains "Deferred cleanup"
+  assert_output_contains "FAIL_MESSAGE:"
+  assert_output_contains "deferred action failed: return 1"
+}
+
+@test "shellkin test reports a missing step definition during execution" {
+  write_file features/sample.feature <<'EOF'
+Feature: Missing step definition
+
+Scenario: Show unmatched step
+  Then I do not exist
+EOF
+
+  write_file features/step_definitions/core.sh <<'EOF'
+@When I run '{command}'
+run "$command"
+EOF
+
+  run "$SHELLKIN_REPO_ROOT/shellkin" test "$TEST_ROOT/features"
+
+  [ "$status" -eq 1 ]
+  assert_output_contains "FAIL_MESSAGE:"
+  assert_output_contains "no matching step definition for: Then I do not exist"
 }

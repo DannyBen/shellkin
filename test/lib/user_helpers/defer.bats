@@ -7,6 +7,7 @@ setup() {
   source_libs user_helpers/defer
 
   SCENARIO_DEFERRED_COMMANDS=()
+  FAIL_MESSAGE=
 }
 
 teardown() {
@@ -38,7 +39,7 @@ teardown() {
   [ "$(cat "$TEST_ROOT/output.txt")" = $'second\nfirst' ]
 }
 
-@test "defer__run_all keeps running after a deferred action fails" {
+@test "defer__run_all stops at the first deferred failure and stores a failure message" {
   defer 'printf "%s\n" "first" >> "$TEST_ROOT/output.txt"'
   defer 'return 1'
   defer 'printf "%s\n" "third" >> "$TEST_ROOT/output.txt"'
@@ -50,5 +51,6 @@ teardown() {
   fi
 
   [ "$status" -eq 1 ]
-  [ "$(cat "$TEST_ROOT/output.txt")" = $'third\nfirst' ]
+  [ "$FAIL_MESSAGE" = "deferred action failed: return 1" ]
+  [ "$(cat "$TEST_ROOT/output.txt")" = "third" ]
 }

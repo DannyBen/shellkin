@@ -117,7 +117,14 @@ feature_run() {
   done <"$feature_file"
 
   if ((failed == 0 && scenario_seen != 0)); then
-    feature_scenario_run "$FEATURE_SCENARIO_NAME" background_steps scenario_steps || failed=1
+    if feature_scenario_run "$FEATURE_SCENARIO_NAME" background_steps scenario_steps; then
+      :
+    else
+      failed=1
+      if ((TEST_FAIL_FAST != 0)); then
+        TEST_ABORT_RUN=1
+      fi
+    fi
   elif ((scenario_seen != 0)); then
     if feature_scenario_run "$FEATURE_SCENARIO_NAME" background_steps scenario_steps; then
       :
@@ -421,6 +428,7 @@ feature_scenario_run() {
     :
   else
     scenario_failed=1
+    output_deferred_failure
   fi
   set -e
 

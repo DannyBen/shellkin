@@ -22,12 +22,17 @@ defer__run_command() {
 defer__run_all() {
   local index
   local deferred_command
-  local status=0
 
   for ((index=${#SCENARIO_DEFERRED_COMMANDS[@]} - 1; index >= 0; index--)); do
     deferred_command=${SCENARIO_DEFERRED_COMMANDS[$index]}
-    defer__run_command "$deferred_command" || status=1
+    if defer__run_command "$deferred_command"; then
+      :
+    else
+      FAIL_MESSAGE="deferred action failed: $deferred_command"
+      export FAIL_MESSAGE
+      return 1
+    fi
   done
 
-  return "$status"
+  return 0
 }
