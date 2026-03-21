@@ -104,3 +104,30 @@ EOF
   [[ "$output" != *"Scenario: Second"* ]]
   assert_output_contains "1 scenario, 0 passing, 1 failing"
 }
+
+@test "shellkin test runs deferred cleanup after a failing scenario" {
+  write_file features/sample.feature <<'EOF'
+Feature: Deferred cleanup
+
+Scenario: Cleanup after failure
+  Given I create a tracked temp directory
+  When I fail
+EOF
+
+  write_file features/step_definitions/core.sh <<'EOF'
+@Given I create a tracked temp directory
+TEMP_DIR=$(mktemp -d)
+printf '%s' "$TEMP_DIR" > "$TEST_ROOT/tempdir-path"
+defer rm -rf "$TEMP_DIR"
+
+@When I fail
+return 1
+EOF
+
+  run "$SHELLKIN_REPO_ROOT/shellkin" test "$TEST_ROOT/features"
+
+  path=$(cat "$TEST_ROOT/tempdir-path")
+  [ "$status" -eq 1 ]
+  [ ! -e "$path" ]
+  assert_output_contains "1 scenario, 0 passing, 1 failing"
+}

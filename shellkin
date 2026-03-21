@@ -627,6 +627,7 @@ feature_scenario_run() {
 
   ((TEST_SCENARIOS_TOTAL += 1))
   FEATURE_PREVIOUS_STEP_TYPE=
+  SCENARIO_DEFERRED_COMMANDS=()
   output_scenario_start "$scenario_name"
 
   set +e
@@ -658,6 +659,12 @@ feature_scenario_run() {
       skip_remaining=1
     fi
   done
+
+  if defer__run_all; then
+    :
+  else
+    scenario_failed=1
+  fi
   set -e
 
   if ((scenario_failed != 0)); then
@@ -1133,6 +1140,41 @@ stepdef_parse() {
   STEPDEF_TOKENS=$(pattern_tokens "$pattern")
 
   return 0
+}
+
+# src/lib/user_helpers/defer.sh
+defer() {
+  local deferred_command=
+
+  (($# > 0)) || return 1
+
+  if (($# == 1)); then
+    deferred_command=$1
+  else
+    printf -v deferred_command '%q ' "$@"
+    deferred_command=${deferred_command% }
+  fi
+
+  SCENARIO_DEFERRED_COMMANDS+=("$deferred_command")
+}
+
+defer__run_command() {
+  local deferred_command=$1
+
+  eval "$deferred_command"
+}
+
+defer__run_all() {
+  local index
+  local deferred_command
+  local status=0
+
+  for ((index=${#SCENARIO_DEFERRED_COMMANDS[@]} - 1; index >= 0; index--)); do
+    deferred_command=${SCENARIO_DEFERRED_COMMANDS[$index]}
+    defer__run_command "$deferred_command" || status=1
+  done
+
+  return "$status"
 }
 
 # src/lib/user_helpers/fail.sh

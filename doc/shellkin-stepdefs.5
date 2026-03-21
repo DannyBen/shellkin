@@ -66,6 +66,21 @@ Fail the current step with an optional custom message.
 \(atThen the output should include \(aq{text}\(aq
 \f[B][[\f[R] \(dq$LAST_STDOUT\(dq == *\(dq$text\(dq* \f[B]]]\f[R] \f[B]||\f[R] fail \(dqinvalid output detected\(dq
 .EE
+.SS defer
+Register cleanup code to run when the current scenario finishes.
+.IP
+.EX
+\(atGiven I am in a temp directory
+old_pwd=$PWD
+temp_dir=$(mktemp \-d)
+cd \(dq$temp_dir\(dq
+defer cd \(dq$old_pwd\(dq
+defer rm \-rf \(dq$temp_dir\(dq
+.EE
+.PP
+Deferred actions are scoped to the current scenario.
+They run after both passing and failing scenarios, and execute in
+reverse order of registration.
 .SH ENVIRONMENT
 Shellkin exposes these variables to step definition bodies:
 .IP \(bu 2
@@ -102,8 +117,11 @@ Then the output should match
 .IP
 .EX
 \(atGiven I am in a temp directory
-TEMP_DIR=$(mktemp \-d)
-cd \(dq$TEMP_DIR\(dq
+old_pwd=$PWD
+temp_dir=$(mktemp \-d)
+cd \(dq$temp_dir\(dq
+defer cd \(dq$old_pwd\(dq
+defer rm \-rf \(dq$temp_dir\(dq
 
 \(atWhen I run \(aq{command}\(aq
 run \(dq$command\(dq

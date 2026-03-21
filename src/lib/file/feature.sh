@@ -384,6 +384,7 @@ feature_scenario_run() {
 
   ((TEST_SCENARIOS_TOTAL += 1))
   FEATURE_PREVIOUS_STEP_TYPE=
+  SCENARIO_DEFERRED_COMMANDS=()
   output_scenario_start "$scenario_name"
 
   set +e
@@ -415,6 +416,12 @@ feature_scenario_run() {
       skip_remaining=1
     fi
   done
+
+  if defer__run_all; then
+    :
+  else
+    scenario_failed=1
+  fi
   set -e
 
   if ((scenario_failed != 0)); then

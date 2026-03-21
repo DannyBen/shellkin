@@ -89,6 +89,23 @@ Fail the current step with an optional custom message.
 [[ "$LAST_STDOUT" == *"$text"* ]] || fail "invalid output detected"
 ```
 
+defer
+--------------------------------------------------
+
+Register cleanup code to run when the current scenario finishes.
+
+```bash
+@Given I am in a temp directory
+old_pwd=$PWD
+temp_dir=$(mktemp -d)
+cd "$temp_dir"
+defer cd "$old_pwd"
+defer rm -rf "$temp_dir"
+```
+
+Deferred actions are scoped to the current scenario. They run after both
+passing and failing scenarios, and execute in reverse order of registration.
+
 ENVIRONMENT
 ==================================================
 
@@ -124,8 +141,11 @@ EXAMPLE
 
 ```bash
 @Given I am in a temp directory
-TEMP_DIR=$(mktemp -d)
-cd "$TEMP_DIR"
+old_pwd=$PWD
+temp_dir=$(mktemp -d)
+cd "$temp_dir"
+defer cd "$old_pwd"
+defer rm -rf "$temp_dir"
 
 @When I run '{command}'
 run "$command"

@@ -5,7 +5,7 @@ load ../../test_helper.bash
 setup() {
   setup_test_environment
   eval "$(declare -f run | sed '1s/^run /bats_run /')"
-  source_libs core/colors core/trim syntax/pattern syntax/stepdef syntax/feature file/stepdefs user_helpers/run user_helpers/fail runtime/step output/test file/feature
+  source_libs core/colors core/trim syntax/pattern syntax/stepdef syntax/feature file/stepdefs user_helpers/run user_helpers/fail user_helpers/defer runtime/step output/test file/feature
 
   STEPDEF_TYPES=()
   STEPDEF_PATTERNS=()
@@ -21,6 +21,7 @@ setup() {
   FEATURE_RECORDED_STEP_KEYWORD=
   FEATURE_RECORDED_STEP_TEXT=
   FEATURE_RECORDED_STEP_DOC_STRING=
+  SCENARIO_DEFERRED_COMMANDS=()
   TEST_SCENARIOS_TOTAL=0
   TEST_SCENARIOS_FAILED=0
   TEST_FAIL_FAST=0
@@ -81,6 +82,39 @@ teardown() {
   output=$(strip_ansi <"$TEST_ROOT/output.txt")
   assert_output_contains "- When I run 'touch somefile' (skipped)"
   assert_output_contains "- Then the file 'somefile' should exist (skipped)"
+}
+
+@test "feature_scenario_run runs deferred cleanup after a passing scenario" {
+  stepdef_parse "@Given I am in a temp directory"
+  stepdef_register $'TEMP_DIR=$(mktemp -d)\ndefer "rm -rf \\"$TEMP_DIR\\""\ncd "$TEMP_DIR"'
+  stepdef_parse "@Then the file '{path}' should exist"
+  stepdef_register 'touch "$path"; [[ -f "$path" ]]'
+
+  background_steps=()
+  scenario_steps=($'Given\tI am in a temp directory' $'Then\tthe file '\''somefile'\'' should exist')
+
+  feature_scenario_run "Example" background_steps scenario_steps
+
+  [ ! -e "$TEMP_DIR" ]
+}
+
+@test "feature_scenario_run runs deferred cleanup after a failing scenario" {
+  stepdef_parse "@Given I am in a temp directory"
+  stepdef_register $'TEMP_DIR=$(mktemp -d)\ndefer "rm -rf \\"$TEMP_DIR\\""\ncd "$TEMP_DIR"'
+  stepdef_parse "@When I fail"
+  stepdef_register 'return 1'
+
+  background_steps=()
+  scenario_steps=($'Given\tI am in a temp directory' $'When\tI fail')
+
+  if feature_scenario_run "Example" background_steps scenario_steps; then
+    status=0
+  else
+    status=$?
+  fi
+
+  [ "$status" -eq 1 ]
+  [ ! -e "$TEMP_DIR" ]
 }
 
 @test "feature_run executes a scenario using loaded step definitions" {
