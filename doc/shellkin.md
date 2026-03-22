@@ -16,6 +16,8 @@ DESCRIPTION
 ==================================================
 
 Gherkin-style BDD Test Framework for Bash Scripts
+Supports configuration from a .shellkin argfile in the working directory
+
 
 
 ARGUMENTS

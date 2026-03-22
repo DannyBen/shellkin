@@ -131,7 +131,12 @@ version_command() {
 
 # :command.usage
 shellkin_usage() {
-  printf "shellkin - Gherkin-style BDD Test Framework for Bash Scripts\n\n"
+  if [[ -n $long_usage ]]; then
+    printf "shellkin\n\n"
+    printf "  Gherkin-style BDD Test Framework for Bash Scripts\n  Supports configuration from a .shellkin argfile in the working directory\n\n"
+  else
+    printf "shellkin - Gherkin-style BDD Test Framework for Bash Scripts\n\n"
+  fi
 
   printf "%s\n" "$(bold "Usage:")"
   printf "  shellkin [TARGET] [OPTIONS]\n"
