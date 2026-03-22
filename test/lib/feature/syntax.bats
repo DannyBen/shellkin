@@ -4,7 +4,7 @@ load ../../test_helper.bash
 
 setup() {
   setup_test_environment
-  source_libs core/trim syntax/feature
+  source_libs core/trim feature/syntax
 }
 
 teardown() {

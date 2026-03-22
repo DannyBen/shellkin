@@ -1,3 +1,11 @@
+## Collects step definition files from a step definitions directory.
+stepdefs_files_find() {
+  local stepdefs_dir=$1
+
+  readarray -t STEPDEF_FILES < <(find "$stepdefs_dir" -maxdepth 1 -type f \( -name '*.sh' -o -name '*.bash' \) | sort)
+}
+
+## Parses one step definition file and registers its step bodies.
 stepdefs_file_parse() {
   local file=$1
   local line

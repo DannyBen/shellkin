@@ -1,3 +1,4 @@
+## Converts a tokenized step pattern into a regular expression.
 pattern_regex() {
   local pattern=$1
   local compiled=
@@ -17,6 +18,7 @@ pattern_regex() {
   printf '%s' "$compiled"
 }
 
+## Extracts token names from a tokenized step pattern.
 pattern_tokens() {
   local pattern=$1
   local remainder=$pattern
@@ -30,6 +32,7 @@ pattern_tokens() {
   printf '%s' "${tokens[*]}"
 }
 
+## Escapes literal text so it can be embedded in a regular expression.
 _pattern_escape_literal() {
   printf '%s' "$1" | sed -e 's/[][(){}.^$+?|\\]/\\&/g'
 }

@@ -10,7 +10,7 @@ teardown() {
   teardown_test_environment
 }
 
-@test "shellkin validate succeeds for valid features without executing steps" {
+@test "shellkin --validate succeeds for valid features without executing steps" {
   write_file features/sample.feature <<'EOF'
 Feature: Validate only
 
@@ -23,7 +23,7 @@ EOF
 touch "$TEST_ROOT/should-not-exist"
 EOF
 
-  run "$SHELLKIN_REPO_ROOT/shellkin" validate "$TEST_ROOT/features"
+  run "$SHELLKIN_REPO_ROOT/shellkin" --validate "$TEST_ROOT/features"
 
   [ "$status" -eq 0 ]
   [ ! -e "$TEST_ROOT/should-not-exist" ]
@@ -32,7 +32,7 @@ EOF
   assert_output_contains "validation passed: 2 files checked"
 }
 
-@test "shellkin validate fails for an unmatched step" {
+@test "shellkin --validate fails for an unmatched step" {
   write_file features/sample.feature <<'EOF'
 Feature: Validate mismatch
 
@@ -45,7 +45,7 @@ EOF
 run "$command"
 EOF
 
-  run "$SHELLKIN_REPO_ROOT/shellkin" validate "$TEST_ROOT/features"
+  run "$SHELLKIN_REPO_ROOT/shellkin" --validate "$TEST_ROOT/features"
 
   [ "$status" -eq 1 ]
   assert_output_contains "file: sample.feature"
@@ -54,7 +54,7 @@ EOF
   assert_output_contains "Then I do not exist"
 }
 
-@test "shellkin validate fails for invalid feature structure" {
+@test "shellkin --validate fails for invalid feature structure" {
   write_file features/sample.feature <<'EOF'
 Feature: Invalid feature
 
@@ -70,7 +70,7 @@ EOF
 true
 EOF
 
-  run "$SHELLKIN_REPO_ROOT/shellkin" validate "$TEST_ROOT/features"
+  run "$SHELLKIN_REPO_ROOT/shellkin" --validate "$TEST_ROOT/features"
 
   [ "$status" -eq 1 ]
   assert_output_contains "line 7: Background must appear after Feature and before the first Scenario"

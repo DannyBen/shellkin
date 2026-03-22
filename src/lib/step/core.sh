@@ -1,3 +1,4 @@
+## Checks whether any registered step definition matches a step.
 step_match() {
   local type=$1
   local text=$2
@@ -16,6 +17,7 @@ step_match() {
   return 1
 }
 
+## Executes the first registered step definition that matches a step.
 step_run() {
   local type=$1
   local text=$2

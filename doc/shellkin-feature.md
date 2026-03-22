@@ -163,7 +163,7 @@ Scenario: Create a file
 SEE ALSO
 ==================================================
 
-**shellkin**(1), **shellkin-test**(1), **shellkin-stepdefs**(5)
+**shellkin**(1), **shellkin-stepdefs**(5)
 
 
 SOURCE CODE

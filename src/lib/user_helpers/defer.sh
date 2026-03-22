@@ -1,3 +1,4 @@
+## Registers a cleanup command to run after the scenario finishes.
 defer() {
   local deferred_command=
 
@@ -13,12 +14,14 @@ defer() {
   SCENARIO_DEFERRED_COMMANDS+=("$deferred_command")
 }
 
+## Executes one deferred cleanup command.
 defer__run_command() {
   local deferred_command=$1
 
   eval "$deferred_command"
 }
 
+## Executes deferred cleanup commands in reverse registration order.
 defer__run_all() {
   local index
   local deferred_command

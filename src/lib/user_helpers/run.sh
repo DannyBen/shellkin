@@ -1,3 +1,4 @@
+## Runs a shell command and captures its exit code and output.
 run() {
   local command_string=$1
   local stdout_file

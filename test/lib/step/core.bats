@@ -6,7 +6,7 @@ setup() {
   setup_test_environment
 
   eval "$(declare -f run | sed '1s/^run /bats_run /')"
-  source_libs syntax/pattern syntax/stepdef user_helpers/run user_helpers/fail runtime/step
+  source_libs stepdef/pattern stepdef/parse user_helpers/run user_helpers/fail step/core
 
   STEPDEF_TYPES=()
   STEPDEF_PATTERNS=()

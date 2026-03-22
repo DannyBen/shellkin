@@ -4,7 +4,7 @@ load ../../test_helper.bash
 
 setup() {
   setup_test_environment
-  source_libs syntax/pattern
+  source_libs stepdef/pattern
 }
 
 teardown() {

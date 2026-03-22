@@ -10,7 +10,7 @@ NAME
 SYNOPSIS
 ==================================================
 
-**shellkin** [COMMAND]
+**shellkin** [TARGET] [OPTIONS]
 
 DESCRIPTION
 ==================================================
@@ -18,48 +18,59 @@ DESCRIPTION
 Gherkin-style BDD Test Framework for Bash Scripts
 
 
-COMMANDS
+ARGUMENTS
 ==================================================
 
-shellkin test
+TARGET
 --------------------------------------------------
 
-Run feature tests
-
-shellkin validate
---------------------------------------------------
-
-Validate feature files and step definition files
+Path to features directory or a single feature file
+Default: value of --default-target
 
 
-ENVIRONMENT VARIABLES
+
+OPTIONS
 ==================================================
 
-SHELLKIN_FEATURES_ROOT
+--fail-fast, -f
+--------------------------------------------------
+
+Abort after the first failing scenario
+
+
+--validate, -v
+--------------------------------------------------
+
+Validate feature and step definition files
+
+
+--default-target, -t DIR
 --------------------------------------------------
 
 Path to features directory (relative to working directory)
+This flag is normally only used in a .shellkin argfile
+
 
 - Default Value: **features**
 
-SHELLKIN_STEPDEFS_ROOT
+--stepdefs, -s DIR
 --------------------------------------------------
 
 Path to step definitions directory (relative to features root)
 
 - Default Value: **step_definitions**
 
-SHELLKIN_SUPPORT_FILE
+--load, -l SUPPORT_SCRIPT
 --------------------------------------------------
 
 Path to support script for step definitions (relative to features root)
 
-- Default Value: **support.sh**
+- *Repeatable*
 
 SEE ALSO
 ==================================================
 
-**shellkin-test**(1), **shellkin-validate**(1), **shellkin-stepdefs**(5), **shellkin-feature**(5)
+**shellkin-stepdefs**(5), **shellkin-feature**(5)
 
 # SOURCE CODE
 

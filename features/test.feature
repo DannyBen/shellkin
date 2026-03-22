@@ -2,25 +2,49 @@ Feature: test
   Run feature tests
 
 Scenario: Running all feature tests
-  When I run 'shellkin test features/fixtures/features'
+  When I run 'shellkin features/fixtures/features'
   Then the output should include 'Feature: one'
    And the output should include '3 scenarios, 0 failing'
    And the exit code should mean success
 
 Scenario: Running a failing test
-  When I run 'shellkin test features/fixtures/selective/failing.feature'
+  When I run 'shellkin features/fixtures/selective/failing.feature'
   Then the output should include 'Feature: two'
    And the output should include '1 scenario, 0 passing, 1 failing'
    And the exit code should mean failure
 
 Scenario: Running a single feature file
-  When I run 'shellkin test features/fixtures/features/one.feature'
+  When I run 'shellkin features/fixtures/features/one.feature'
   Then the output should include 'Feature: one'
    And the output should include '1 scenario, 0 failing'
    And the exit code should mean success
 
+Scenario: Using --default-target when TARGET is omitted
+  When I run 'shellkin --default-target features/fixtures/features'
+  Then the output should include 'Feature: one'
+  And the output should include '3 scenarios, 0 failing'
+  And the exit code should mean success
+
+Scenario: Letting TARGET override --default-target
+  When I run 'shellkin --default-target features/fixtures/selective features/fixtures/features/one.feature'
+  Then the output should include 'Feature: one'
+  And the output should include '1 scenario, 0 failing'
+  And the exit code should mean success
+
+Scenario: Using --default-target together with --stepdefs
+  When I run 'shellkin --default-target features/fixtures/configurable/sample.feature --stepdefs steps'
+  Then the output should include 'Feature: configurable fixture'
+  And the output should include '1 scenario, 0 failing'
+  And the exit code should mean success
+
+Scenario: Loading multiple support files in order
+  When I run 'shellkin --stepdefs steps --load first_support.sh --load second_support.sh features/fixtures/configurable/load_order.feature'
+  Then the output should include 'hello world'
+  And the output should include '1 scenario, 0 failing'
+  And the exit code should mean success
+
 Scenario: Running a feature that uses the star step keyword
-  When I run 'shellkin test features/fixtures/selective/star_step.feature'
+  When I run 'shellkin features/fixtures/selective/star_step.feature'
   Then the output should include 'Feature: star step keyword'
   And the output should include 'When I run'
   And the output should include '* I run'
@@ -28,7 +52,7 @@ Scenario: Running a feature that uses the star step keyword
   And the exit code should mean success
 
 Scenario: Continuing to the next scenario after a failure by default
-  When I run 'shellkin test features/fixtures/selective/continue_after_failure.feature'
+  When I run 'shellkin features/fixtures/selective/continue_after_failure.feature'
   Then the output should include 'Scenario: first fails'
   And the output should include 'Then the output should include'
   And the output should include '(skipped)'
@@ -37,7 +61,7 @@ Scenario: Continuing to the next scenario after a failure by default
   And the exit code should mean failure
 
 Scenario: Skipping scenario steps after a failing background
-  When I run 'shellkin test features/fixtures/selective/background_failure.feature'
+  When I run 'shellkin features/fixtures/selective/background_failure.feature'
   Then the output should include 'Given setup fails'
   And the output should include 'Then I announce'
   And the output should include '(skipped)'
@@ -45,26 +69,15 @@ Scenario: Skipping scenario steps after a failing background
   And the exit code should mean failure
 
 Scenario: Failing on a missing step definition
-  When I run 'shellkin test features/fixtures/selective/missing_stepdef.feature'
+  When I run 'shellkin features/fixtures/selective/missing_stepdef.feature'
   Then the output should include 'Then I do not exist'
   And the output should include '  - And I also should be skipped (skipped)'
   And the output should include '1 scenario, 0 passing, 1 failing'
   And the exit code should mean failure
 
 Scenario: Printing doc string context for a failing step
-  When I run 'shellkin test features/fixtures/selective/failing_doc_string.feature'
+  When I run 'shellkin features/fixtures/selective/failing_doc_string.feature'
   Then the output should include 'Feature: failing doc string'
   And the output should include 'goodbye'
   And the output should include '1 scenario, 0 passing, 1 failing'
-  And the exit code should mean failure
-
-Scenario: Validating a runtime-failing feature without executing it
-  When I run 'shellkin validate features/fixtures/selective/failing.feature'
-  Then the output should include 'file: failing.feature'
-  And the output should include '✓ feature'
-  And the exit code should mean success
-
-Scenario: Failing validation on an unmatched step
-  When I run 'shellkin validate features/fixtures/selective/missing_stepdef.feature'
-  Then the output should include 'line 6: no matching step definition'
   And the exit code should mean failure

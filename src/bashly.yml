@@ -2,39 +2,38 @@ name: shellkin
 help: Gherkin-style BDD Test Framework for Bash Scripts
 version: 0.1.2
 
-environment_variables:
-- name: shellkin_features_root
-  help: Path to features directory (relative to working directory)
+argfile: .shellkin
+
+args:
+- name: target
+  help: |
+    Path to features directory or a single feature file
+    Default: value of --default-target
+
+flags:
+- long: --fail-fast
+  short: -f
+  help: Abort after the first failing scenario
+- long: --validate
+  short: -v
+  help: Validate feature and step definition files
+- long: --default-target
+  short: -t
+  help: |
+    Path to features directory (relative to working directory)
+    This flag is normally only used in a .shellkin argfile
+  arg: dir
   default: features
-- name: shellkin_stepdefs_root
+- long: --stepdefs
+  short: -s
+  arg: dir
   help: Path to step definitions directory (relative to features root)
   default: step_definitions
-- name: shellkin_support_file
+- long: --load
+  short: -l
+  arg: support_script
   help: Path to support script for step definitions (relative to features root)
-  default: support.sh
-
-commands:
-- name: test
-  alias: t
-  default: force
-  help: Run feature tests
-
-  args:
-  - &args_target
-    name: target
-    default: "$SHELLKIN_FEATURES_ROOT"
-    help: Path to features directory or a single feature file
-    validate: [test_target]
-
-  flags:
-  - long: --fail-fast
-    short: -f
-    help: Abort after the first failing scenario
-
-- name: validate
-  alias: v
-  help: Validate feature files and step definition files
-  args: [*args_target]
+  repeatable: true
 
 
 # Manpages Extras
