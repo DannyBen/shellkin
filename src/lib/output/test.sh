@@ -1,11 +1,14 @@
+## Prints the heading for a feature run.
 output_feature_start() {
   blue_bold "\nFeature: $1"
 }
 
+## Prints the heading for a scenario run.
 output_scenario_start() {
   bold "\nScenario: $1"
 }
 
+## Prints a formatted label inside a failure block.
 output_failure_label() {
   local label=$1
 
@@ -16,6 +19,7 @@ output_failure_label() {
   fi
 }
 
+## Prints one named failure detail value.
 output_failure_block() {
   local label=$1
   local value=$2
@@ -37,6 +41,7 @@ output_failure_block() {
   printf '\n'
 }
 
+## Prints the result line for a step execution.
 output_step_result() {
   local status=$1
   local type=$2
@@ -59,6 +64,7 @@ output_step_result() {
   green "$line"
 }
 
+## Prints a skipped step line after a previous failure.
 output_step_skipped() {
   local type=$1
   local text=$2
@@ -66,11 +72,13 @@ output_step_skipped() {
   cyan "  - $type $text (skipped)"
 }
 
+## Prints the deferred cleanup failure section.
 output_deferred_failure() {
   red "  ✗ Deferred cleanup"
   output_failure_block "FAIL_MESSAGE" "${FAIL_MESSAGE:-}"
 }
 
+## Prints the final summary for a test run.
 output_summary() {
   local total_scenarios=$1
   local failed_scenarios=$2

@@ -1,3 +1,4 @@
+## Classifies one feature file line and stores its parsed parts.
 feature_line_parse() {
   local line
 
@@ -51,6 +52,7 @@ feature_line_parse() {
   FEATURE_LINE_NAME=$line
 }
 
+## Resolves And, But, and * step types to the previous concrete type.
 feature_step_type_resolve() {
   local previous_type=$1
   local current_type=$2

@@ -9,6 +9,120 @@ if ((BASH_VERSINFO[0] < 4 || (BASH_VERSINFO[0] == 4 && BASH_VERSINFO[1] < 2))); 
 fi
 
 # :command.master_script
+# :command.root_command
+root_command() {
+  # src/root_command.sh
+  target_input=${args['target']:-${args['--default-target']}}
+  stepdefs_subdir=${args['--stepdefs']}
+  fail_fast=${args['--fail-fast']:-0}
+  validate_mode=${args['--validate']:-0}
+  load_args=${args['--load']:-}
+  load_paths=()
+  feature_status=0
+  validation_status=0
+  validation_total=0
+  validation_failed=0
+  feature_files=()
+
+  if [[ -n $load_args ]]; then
+    eval "load_paths=( $load_args )"
+  fi
+
+  if ! validate_test_target "$target_input" "$stepdefs_subdir"; then
+    printf 'validation error in TARGET:\n%s\n' "$VALIDATION_ERROR" >&2
+    return 1
+  fi
+
+  TARGET_PATH=$(realpath "$target_input" 2>/dev/null) || {
+    printf 'validation error in TARGET:\nunable to resolve path: %s\n' "$target_input" >&2
+    return 1
+  }
+
+  STEPDEF_TYPES=()
+  STEPDEF_PATTERNS=()
+  STEPDEF_REGEXES=()
+  STEPDEF_TOKENS_LIST=()
+  STEPDEF_BODIES=()
+
+  if [[ -f $TARGET_PATH ]]; then
+    FEATURES_DIR="$(dirname "$TARGET_PATH")"
+    feature_files=("$TARGET_PATH")
+  else
+    FEATURES_DIR="$TARGET_PATH"
+    readarray -t feature_files < <(find "$FEATURES_DIR" -maxdepth 1 -type f -name '*.feature' | sort)
+  fi
+
+  STEPDEFS_DIR="$FEATURES_DIR/$stepdefs_subdir"
+  VALIDATION_FEATURES_DIR="$FEATURES_DIR"
+  VALIDATION_STEPDEFS_DIR="$STEPDEFS_DIR"
+
+  support_files_source_all "$FEATURES_DIR" "${load_paths[@]}" || {
+    printf '%s\n' "$SUPPORT_ERROR" >&2
+    return 1
+  }
+
+  stepdefs_files_find "$STEPDEFS_DIR"
+
+  if ((validate_mode != 0)); then
+    for stepdef_file in "${STEPDEF_FILES[@]}"; do
+      ((validation_total += 1))
+      output_validate_file_start "stepdefs" "$(validation_stepdef_relpath "$stepdef_file")"
+
+      if stepdefs_file_parse "$stepdef_file"; then
+        output_validate_ok "step definitions"
+      else
+        output_validate_fail "step definitions"
+        output_validate_detail "invalid step definition file"
+        validation_status=1
+        ((validation_failed += 1))
+      fi
+    done
+
+    for feature_file in "${feature_files[@]}"; do
+      ((validation_total += 1))
+      output_validate_file_start "file" "$(validation_feature_relpath "$feature_file")"
+
+      if feature_validate "$feature_file"; then
+        output_validate_ok "feature"
+      else
+        output_validate_fail "feature"
+        if [[ -n ${FEATURE_VALIDATION_LINE:-} ]]; then
+          output_validate_detail "line ${FEATURE_VALIDATION_LINE}: ${FEATURE_VALIDATION_MESSAGE}"
+        fi
+        if [[ -n ${FEATURE_VALIDATION_CONTEXT:-} ]]; then
+          output_validate_source_line "${FEATURE_VALIDATION_CONTEXT}"
+        elif [[ -n ${FEATURE_VALIDATION_MESSAGE:-} && -z ${FEATURE_VALIDATION_LINE:-} ]]; then
+          output_validate_detail "$FEATURE_VALIDATION_MESSAGE"
+        fi
+        validation_status=1
+        ((validation_failed += 1))
+      fi
+    done
+
+    output_validate_summary "$validation_total" "$validation_failed"
+    return "$validation_status"
+  else
+    for stepdef_file in "${STEPDEF_FILES[@]}"; do
+      stepdefs_file_parse "$stepdef_file"
+    done
+
+    TEST_SCENARIOS_TOTAL=0
+    TEST_SCENARIOS_FAILED=0
+    TEST_FAIL_FAST="$fail_fast"
+    TEST_ABORT_RUN=0
+
+    for feature_file in "${feature_files[@]}"; do
+      feature_run "$feature_file" || feature_status=1
+      if ((TEST_ABORT_RUN != 0)); then
+        break
+      fi
+    done
+
+    output_summary "$TEST_SCENARIOS_TOTAL" "$TEST_SCENARIOS_FAILED"
+    return "$feature_status"
+  fi
+
+}
 
 # :command.version_command
 version_command() {
@@ -17,65 +131,17 @@ version_command() {
 
 # :command.usage
 shellkin_usage() {
-  printf "shellkin - Gherkin-style BDD Test Framework for Bash Scripts\n\n"
-
-  printf "%s\n" "$(bold "Usage:")"
-  printf "  shellkin [COMMAND]\n"
-  printf "  shellkin [COMMAND] --help | -h\n"
-  printf "  shellkin --version | -v\n"
-  echo
-  # :command.usage_commands
-  printf "%s\n" "$(bold "Commands:")"
-  printf "  %s   Run feature tests (default)\n" "$(green "test")    "
-  printf "  %s   Validate feature files and step definition files\n" "$(green "validate")"
-  echo
-
-  # :command.long_usage
-  if [[ -n "$long_usage" ]]; then
-    # :command.usage_options
-    printf "%s\n" "$(bold "Options:")"
-
-    # :command.usage_fixed_flags
-    printf "  %s\n" "$(green "--help, -h")"
-    printf "    Show this help\n"
-    echo
-    printf "  %s\n" "$(green "--version, -v")"
-    printf "    Show version number\n"
-    echo
-
-    # :command.usage_environment_variables
-    printf "%s\n" "$(bold "Environment Variables:")"
-
-    # :environment_variable.usage
-    printf "  %s\n" "$(green "SHELLKIN_FEATURES_ROOT")"
-    printf "    Path to features directory (relative to working directory)\n"
-    printf "    %s\n" "Default: features"
-    echo
-
-    # :environment_variable.usage
-    printf "  %s\n" "$(green "SHELLKIN_STEPDEFS_ROOT")"
-    printf "    Path to step definitions directory (relative to features root)\n"
-    printf "    %s\n" "Default: step_definitions"
-    echo
-
-    # :environment_variable.usage
-    printf "  %s\n" "$(green "SHELLKIN_SUPPORT_FILE")"
-    printf "    Path to support script for step definitions (relative to features root)\n"
-    printf "    %s\n" "Default: support.sh"
-    echo
-
+  if [[ -n $long_usage ]]; then
+    printf "shellkin\n\n"
+    printf "  Gherkin-style BDD Test Framework for Bash Scripts\n  Supports configuration from a .shellkin argfile in the working directory\n\n"
+  else
+    printf "shellkin - Gherkin-style BDD Test Framework for Bash Scripts\n\n"
   fi
-}
-
-# :command.usage
-shellkin_test_usage() {
-  printf "shellkin test - Run feature tests\n\n"
-  printf "Alias: t\n"
-  echo
 
   printf "%s\n" "$(bold "Usage:")"
-  printf "  shellkin [test] [TARGET] [OPTIONS]\n"
-  printf "  shellkin test --help | -h\n"
+  printf "  shellkin [TARGET] [OPTIONS]\n"
+  printf "  shellkin --help | -h\n"
+  printf "  shellkin --version\n"
   echo
 
   # :command.long_usage
@@ -89,9 +155,34 @@ shellkin_test_usage() {
     printf "    Abort after the first failing scenario\n"
     echo
 
+    # :flag.usage
+    printf "  %s\n" "$(green "--validate, -v")"
+    printf "    Validate feature and step definition files\n"
+    echo
+
+    # :flag.usage
+    printf "  %s\n" "$(green "--default-target, -t DIR")"
+    printf "    Path to features directory (relative to working directory)\n    This flag is normally only used in a .shellkin argfile\n"
+    printf "    %s\n" "Default: features"
+    echo
+
+    # :flag.usage
+    printf "  %s\n" "$(green "--stepdefs, -s DIR")"
+    printf "    Path to step definitions directory (relative to features root)\n"
+    printf "    %s\n" "Default: step_definitions"
+    echo
+
+    # :flag.usage
+    printf "  %s\n" "$(green "--load, -l SUPPORT_SCRIPT (repeatable)")"
+    printf "    Path to support script for step definitions (relative to features root)\n"
+    echo
+
     # :command.usage_fixed_flags
     printf "  %s\n" "$(green "--help, -h")"
     printf "    Show this help\n"
+    echo
+    printf "  %s\n" "$(green "--version")"
+    printf "    Show version number\n"
     echo
 
     # :command.usage_args
@@ -99,41 +190,7 @@ shellkin_test_usage() {
 
     # :argument.usage
     printf "  %s\n" "$(green "TARGET")"
-    printf "    Path to features directory or a single feature file\n"
-    printf "    %s\n" "Default: $SHELLKIN_FEATURES_ROOT"
-    echo
-
-  fi
-}
-
-# :command.usage
-shellkin_validate_usage() {
-  printf "shellkin validate - Validate feature files and step definition files\n\n"
-  printf "Alias: v\n"
-  echo
-
-  printf "%s\n" "$(bold "Usage:")"
-  printf "  shellkin validate [TARGET]\n"
-  printf "  shellkin validate --help | -h\n"
-  echo
-
-  # :command.long_usage
-  if [[ -n "$long_usage" ]]; then
-    # :command.usage_options
-    printf "%s\n" "$(bold "Options:")"
-
-    # :command.usage_fixed_flags
-    printf "  %s\n" "$(green "--help, -h")"
-    printf "    Show this help\n"
-    echo
-
-    # :command.usage_args
-    printf "%s\n" "$(bold "Arguments:")"
-
-    # :argument.usage
-    printf "  %s\n" "$(green "TARGET")"
-    printf "    Path to features directory or a single feature file\n"
-    printf "    %s\n" "Default: $SHELLKIN_FEATURES_ROOT"
+    printf "    Path to features directory or a single feature file\n    Default: value of --default-target\n"
     echo
 
   fi
@@ -169,6 +226,41 @@ normalize_input() {
 
     shift
   done
+}
+
+# :command.argfile_helpers
+load_command_argfile() {
+  local argfile_path line arg
+  argfile_path="$1"
+  shift
+  argfile_input=()
+
+  if [[ ! -f "$argfile_path" ]]; then
+    argfile_input=("$@")
+    return
+  fi
+
+  while IFS= read -r line || [[ -n "$line" ]]; do
+    line="${line#"${line%%[![:space:]]*}"}"
+    line="${line%"${line##*[![:space:]]}"}"
+
+    [[ -z "$line" || "${line:0:1}" == "#" ]] && continue
+
+    if [[ "$line" =~ ^(-{1,2}[^[:space:]]+)[[:space:]]+(.+)$ ]]; then
+      for arg in "${BASH_REMATCH[1]}" "${BASH_REMATCH[2]}"; do
+        arg="${arg#"${arg%%[![:space:]]*}"}"
+        arg="${arg%"${arg##*[![:space:]]}"}"
+        [[ "$arg" =~ ^\"(.*)\"$ || "$arg" =~ ^\'(.*)\'$ ]] && arg="${BASH_REMATCH[1]}"
+        argfile_input+=("$arg")
+      done
+    else
+      arg="$line"
+      [[ "$arg" =~ ^\"(.*)\"$ || "$arg" =~ ^\'(.*)\'$ ]] && arg="${BASH_REMATCH[1]}"
+      argfile_input+=("$arg")
+    fi
+  done <"$argfile_path"
+
+  argfile_input+=("$@")
 }
 
 # :command.inspect_args
@@ -246,7 +338,7 @@ trim() {
   printf '%s' "$value"
 }
 
-# src/lib/file/feature.sh
+# src/lib/feature/core.sh
 feature_run() {
   local feature_file=$1
   local line
@@ -389,7 +481,7 @@ feature_run() {
   return "$failed"
 }
 
-feature_recorded_step_parse() {
+feature__recorded_step_parse() {
   local recorded=$1
   local remainder
 
@@ -410,7 +502,7 @@ feature_recorded_step_validate() {
   local previous_type=$2
   local resolved_type
 
-  feature_recorded_step_parse "$recorded"
+  feature__recorded_step_parse "$recorded"
 
   resolved_type=$(feature_step_type_resolve "$previous_type" "$FEATURE_RECORDED_STEP_KEYWORD") || return 1
   FEATURE_PREVIOUS_STEP_TYPE=$resolved_type
@@ -423,7 +515,7 @@ feature_recorded_step_run() {
   local resolved_type
   local status
 
-  feature_recorded_step_parse "$recorded"
+  feature__recorded_step_parse "$recorded"
 
   resolved_type=$(feature_step_type_resolve "$previous_type" "$FEATURE_RECORDED_STEP_KEYWORD") || return 1
   FEATURE_PREVIOUS_STEP_TYPE=$resolved_type
@@ -463,7 +555,7 @@ feature_scenario_validate() {
     if feature_recorded_step_validate "$step" "$FEATURE_PREVIOUS_STEP_TYPE"; then
       :
     else
-      feature_recorded_step_parse "$step"
+      feature__recorded_step_parse "$step"
       feature_validation_set_error "${background_lines_ref[$index]}" "no matching step definition for" "$FEATURE_RECORDED_STEP_KEYWORD $FEATURE_RECORDED_STEP_TEXT"
       return 1
     fi
@@ -474,7 +566,7 @@ feature_scenario_validate() {
     if feature_recorded_step_validate "$step" "$FEATURE_PREVIOUS_STEP_TYPE"; then
       :
     else
-      feature_recorded_step_parse "$step"
+      feature__recorded_step_parse "$step"
       feature_validation_set_error "${scenario_lines_ref[$index]}" "no matching step definition for" "$FEATURE_RECORDED_STEP_KEYWORD $FEATURE_RECORDED_STEP_TEXT"
       return 1
     fi
@@ -646,7 +738,7 @@ feature_scenario_run() {
   set +e
   for step in "${background_steps_ref[@]}"; do
     if ((skip_remaining != 0)); then
-      feature_recorded_step_parse "$step"
+      feature__recorded_step_parse "$step"
       output_step_skipped "$FEATURE_RECORDED_STEP_KEYWORD" "$FEATURE_RECORDED_STEP_TEXT"
       continue
     fi
@@ -660,7 +752,7 @@ feature_scenario_run() {
   done
   for step in "${scenario_steps_ref[@]}"; do
     if ((skip_remaining != 0)); then
-      feature_recorded_step_parse "$step"
+      feature__recorded_step_parse "$step"
       output_step_skipped "$FEATURE_RECORDED_STEP_KEYWORD" "$FEATURE_RECORDED_STEP_TEXT"
       continue
     fi
@@ -715,90 +807,73 @@ feature_doc_string_apply() {
   esac
 }
 
-# src/lib/file/stepdefs.sh
-stepdefs_file_parse() {
-  local file=$1
+# src/lib/feature/syntax.sh
+feature_line_parse() {
   local line
-  local trimmed_line
-  local next_type=
-  local next_pattern=
-  local next_regex=
-  local next_tokens=
-  local parsed_new_header=0
-  local current_type=
-  local current_pattern=
-  local current_regex=
-  local current_tokens=
-  local current_body=
 
-  while IFS= read -r line || [[ -n $line ]]; do
-    trimmed_line=$(trim "$line")
+  line=$(trim "$1")
 
-    parsed_new_header=0
-    if [[ $trimmed_line == @* ]]; then
-      if stepdef_parse "$trimmed_line"; then
-        parsed_new_header=1
-        next_type=$STEPDEF_TYPE
-        next_pattern=$STEPDEF_PATTERN
-        next_regex=$STEPDEF_REGEX
-        next_tokens=$STEPDEF_TOKENS
-      elif [[ -z $current_type ]]; then
-        return 1
-      fi
-    fi
+  FEATURE_LINE_KIND=
+  FEATURE_LINE_NAME=
+  FEATURE_STEP_TYPE=
+  FEATURE_STEP_TEXT=
 
-    if ((parsed_new_header != 0)); then
-      if [[ -n $current_type ]]; then
-        STEPDEF_TYPE=$current_type
-        STEPDEF_PATTERN=$current_pattern
-        STEPDEF_REGEX=$current_regex
-        STEPDEF_TOKENS=$current_tokens
-        stepdef_register "$current_body"
-      fi
-
-      current_type=$next_type
-      current_pattern=$next_pattern
-      current_regex=$next_regex
-      current_tokens=$next_tokens
-      current_body=
-      continue
-    fi
-
-    if [[ -z $current_type ]]; then
-      continue
-    fi
-
-    if [[ -n $current_body ]]; then
-      current_body+=$'\n'
-    fi
-    current_body+=$line
-  done <"$file"
-
-  if [[ -n $current_type ]]; then
-    STEPDEF_TYPE=$current_type
-    STEPDEF_PATTERN=$current_pattern
-    STEPDEF_REGEX=$current_regex
-    STEPDEF_TOKENS=$current_tokens
-    stepdef_register "$current_body"
+  if [[ -z $line ]]; then
+    FEATURE_LINE_KIND=blank
+    return 0
   fi
+
+  if [[ $line == \#* ]]; then
+    FEATURE_LINE_KIND=comment
+    return 0
+  fi
+
+  if [[ $line =~ ^Feature:[[:space:]]*(.*)$ ]]; then
+    FEATURE_LINE_KIND=feature
+    FEATURE_LINE_NAME=${BASH_REMATCH[1]}
+    return 0
+  fi
+
+  if [[ $line =~ ^Background:[[:space:]]*$ ]]; then
+    FEATURE_LINE_KIND=background
+    return 0
+  fi
+
+  if [[ $line =~ ^Scenario:[[:space:]]*(.*)$ ]]; then
+    FEATURE_LINE_KIND=scenario
+    FEATURE_LINE_NAME=${BASH_REMATCH[1]}
+    return 0
+  fi
+
+  if [[ $line =~ ^(Given|When|Then|And|But|\*)[[:space:]]+(.+)$ ]]; then
+    FEATURE_LINE_KIND=step
+    FEATURE_STEP_TYPE=${BASH_REMATCH[1]}
+    FEATURE_STEP_TEXT=${BASH_REMATCH[2]}
+    return 0
+  fi
+
+  if [[ $line == '"""' ]]; then
+    FEATURE_LINE_KIND=doc_string_fence
+    return 0
+  fi
+
+  FEATURE_LINE_KIND=other
+  FEATURE_LINE_NAME=$line
 }
 
-# src/lib/file/support.sh
-support_file_resolve() {
-  local features_dir=$1
+feature_step_type_resolve() {
+  local previous_type=$1
+  local current_type=$2
 
-  SUPPORT_FILE="$features_dir/$SHELLKIN_SUPPORT_FILE"
-}
-
-support_file_source() {
-  local features_dir=$1
-
-  support_file_resolve "$features_dir"
-
-  if [[ -f $SUPPORT_FILE ]]; then
-    # shellcheck disable=SC1090
-    source "$SUPPORT_FILE"
-  fi
+  case $current_type in
+    And | But | '*')
+      [[ -n $previous_type ]] || return 1
+      printf '%s' "$previous_type"
+      ;;
+    *)
+      printf '%s' "$current_type"
+      ;;
+  esac
 }
 
 # src/lib/output/test.sh
@@ -964,7 +1039,7 @@ output_validate_summary() {
   red_bold "\nvalidation failed: $passed_files passing, $failed_files failing"
 }
 
-# src/lib/runtime/step.sh
+# src/lib/step/core.sh
 step_match() {
   local type=$1
   local text=$2
@@ -1026,113 +1101,81 @@ step_run() {
   return 1
 }
 
-# src/lib/syntax/feature.sh
-feature_line_parse() {
+# src/lib/stepdef/files.sh
+stepdefs_files_find() {
+  local stepdefs_dir=$1
+
+  readarray -t STEPDEF_FILES < <(find "$stepdefs_dir" -maxdepth 1 -type f \( -name '*.sh' -o -name '*.bash' \) | sort)
+}
+
+stepdefs_file_parse() {
+  local file=$1
   local line
+  local trimmed_line
+  local next_type=
+  local next_pattern=
+  local next_regex=
+  local next_tokens=
+  local parsed_new_header=0
+  local current_type=
+  local current_pattern=
+  local current_regex=
+  local current_tokens=
+  local current_body=
 
-  line=$(trim "$1")
+  while IFS= read -r line || [[ -n $line ]]; do
+    trimmed_line=$(trim "$line")
 
-  FEATURE_LINE_KIND=
-  FEATURE_LINE_NAME=
-  FEATURE_STEP_TYPE=
-  FEATURE_STEP_TEXT=
+    parsed_new_header=0
+    if [[ $trimmed_line == @* ]]; then
+      if stepdef_parse "$trimmed_line"; then
+        parsed_new_header=1
+        next_type=$STEPDEF_TYPE
+        next_pattern=$STEPDEF_PATTERN
+        next_regex=$STEPDEF_REGEX
+        next_tokens=$STEPDEF_TOKENS
+      elif [[ -z $current_type ]]; then
+        return 1
+      fi
+    fi
 
-  if [[ -z $line ]]; then
-    FEATURE_LINE_KIND=blank
-    return 0
+    if ((parsed_new_header != 0)); then
+      if [[ -n $current_type ]]; then
+        STEPDEF_TYPE=$current_type
+        STEPDEF_PATTERN=$current_pattern
+        STEPDEF_REGEX=$current_regex
+        STEPDEF_TOKENS=$current_tokens
+        stepdef_register "$current_body"
+      fi
+
+      current_type=$next_type
+      current_pattern=$next_pattern
+      current_regex=$next_regex
+      current_tokens=$next_tokens
+      current_body=
+      continue
+    fi
+
+    if [[ -z $current_type ]]; then
+      continue
+    fi
+
+    if [[ -n $current_body ]]; then
+      current_body+=$'\n'
+    fi
+    current_body+=$line
+  done <"$file"
+
+  if [[ -n $current_type ]]; then
+    STEPDEF_TYPE=$current_type
+    STEPDEF_PATTERN=$current_pattern
+    STEPDEF_REGEX=$current_regex
+    STEPDEF_TOKENS=$current_tokens
+    stepdef_register "$current_body"
   fi
-
-  if [[ $line == \#* ]]; then
-    FEATURE_LINE_KIND=comment
-    return 0
-  fi
-
-  if [[ $line =~ ^Feature:[[:space:]]*(.*)$ ]]; then
-    FEATURE_LINE_KIND=feature
-    FEATURE_LINE_NAME=${BASH_REMATCH[1]}
-    return 0
-  fi
-
-  if [[ $line =~ ^Background:[[:space:]]*$ ]]; then
-    FEATURE_LINE_KIND=background
-    return 0
-  fi
-
-  if [[ $line =~ ^Scenario:[[:space:]]*(.*)$ ]]; then
-    FEATURE_LINE_KIND=scenario
-    FEATURE_LINE_NAME=${BASH_REMATCH[1]}
-    return 0
-  fi
-
-  if [[ $line =~ ^(Given|When|Then|And|But|\*)[[:space:]]+(.+)$ ]]; then
-    FEATURE_LINE_KIND=step
-    FEATURE_STEP_TYPE=${BASH_REMATCH[1]}
-    FEATURE_STEP_TEXT=${BASH_REMATCH[2]}
-    return 0
-  fi
-
-  if [[ $line == '"""' ]]; then
-    FEATURE_LINE_KIND=doc_string_fence
-    return 0
-  fi
-
-  FEATURE_LINE_KIND=other
-  FEATURE_LINE_NAME=$line
 }
 
-feature_step_type_resolve() {
-  local previous_type=$1
-  local current_type=$2
-
-  case $current_type in
-    And | But | '*')
-      [[ -n $previous_type ]] || return 1
-      printf '%s' "$previous_type"
-      ;;
-    *)
-      printf '%s' "$current_type"
-      ;;
-  esac
-}
-
-# src/lib/syntax/pattern.sh
-pattern_regex() {
-  local pattern=$1
-  local compiled=
-  local remainder=$pattern
-  local literal
-
-  while [[ $remainder =~ ^([^{}]*)\{([A-Za-z_][A-Za-z0-9_]*)\}(.*)$ ]]; do
-    literal=${BASH_REMATCH[1]}
-    remainder=${BASH_REMATCH[3]}
-
-    compiled+=$(_pattern_escape_literal "$literal")
-    compiled+="(.+)"
-  done
-
-  compiled+=$(_pattern_escape_literal "$remainder")
-
-  printf '%s' "$compiled"
-}
-
-pattern_tokens() {
-  local pattern=$1
-  local remainder=$pattern
-  local tokens=()
-
-  while [[ $remainder =~ ^([^{}]*)\{([A-Za-z_][A-Za-z0-9_]*)\}(.*)$ ]]; do
-    tokens+=("${BASH_REMATCH[2]}")
-    remainder=${BASH_REMATCH[3]}
-  done
-
-  printf '%s' "${tokens[*]}"
-}
-
-_pattern_escape_literal() {
-  printf '%s' "$1" | sed -e 's/[][(){}.^$+?|\\]/\\&/g'
-}
-
-# src/lib/syntax/stepdef.sh
+# src/lib/stepdef/parse.sh
 stepdef_type_valid() {
   case $1 in
     Given | When | Then)
@@ -1179,6 +1222,83 @@ stepdef_parse() {
   STEPDEF_TOKENS=$(pattern_tokens "$pattern")
 
   return 0
+}
+
+# src/lib/stepdef/pattern.sh
+pattern_regex() {
+  local pattern=$1
+  local compiled=
+  local remainder=$pattern
+  local literal
+
+  while [[ $remainder =~ ^([^{}]*)\{([A-Za-z_][A-Za-z0-9_]*)\}(.*)$ ]]; do
+    literal=${BASH_REMATCH[1]}
+    remainder=${BASH_REMATCH[3]}
+
+    compiled+=$(_pattern_escape_literal "$literal")
+    compiled+="(.+)"
+  done
+
+  compiled+=$(_pattern_escape_literal "$remainder")
+
+  printf '%s' "$compiled"
+}
+
+pattern_tokens() {
+  local pattern=$1
+  local remainder=$pattern
+  local tokens=()
+
+  while [[ $remainder =~ ^([^{}]*)\{([A-Za-z_][A-Za-z0-9_]*)\}(.*)$ ]]; do
+    tokens+=("${BASH_REMATCH[2]}")
+    remainder=${BASH_REMATCH[3]}
+  done
+
+  printf '%s' "${tokens[*]}"
+}
+
+_pattern_escape_literal() {
+  printf '%s' "$1" | sed -e 's/[][(){}.^$+?|\\]/\\&/g'
+}
+
+# src/lib/support/files.sh
+support_files_source_all() {
+  local features_dir=$1
+  shift
+  local load_file
+
+  for load_file in "$@"; do
+    support__file_source "$features_dir" "$load_file" || return 1
+  done
+}
+
+support__file_resolve() {
+  local features_dir=$1
+  local load_path=$2
+
+  SUPPORT_ERROR=
+
+  if [[ $load_path == /* ]]; then
+    SUPPORT_ERROR="load path must be relative to the features directory: $load_path"
+    return 1
+  fi
+
+  SUPPORT_FILE="$features_dir/$load_path"
+}
+
+support__file_source() {
+  local features_dir=$1
+  local load_path=$2
+
+  support__file_resolve "$features_dir" "$load_path" || return 1
+
+  if [[ ! -f $SUPPORT_FILE ]]; then
+    SUPPORT_ERROR="load file not found: $SUPPORT_FILE"
+    return 1
+  fi
+
+  # shellcheck disable=SC1090
+  source "$SUPPORT_FILE"
 }
 
 # src/lib/user_helpers/defer.sh
@@ -1253,161 +1373,43 @@ run() {
 
 # src/lib/validations/validate_test_target.sh
 validate_test_target() {
+  local target=$1
+  local stepdefs_dir=$2
   local features_dir
+  local -a errors=()
 
-  if [[ -f "$1" ]]; then
-    features_dir=$(dirname "$1")
-    [[ $1 == *.feature ]] || echo "$1 must be a .feature file"
-    [[ -d "$features_dir/$SHELLKIN_STEPDEFS_ROOT" ]] || echo "$features_dir/$SHELLKIN_STEPDEFS_ROOT must be a directory"
-    return 0
+  VALIDATION_ERROR=
+
+  if [[ -f "$target" ]]; then
+    features_dir=$(dirname "$target")
+    [[ $target == *.feature ]] || errors+=("$target must be a .feature file or a directory")
+    [[ -d "$features_dir/$stepdefs_dir" ]] || errors+=("$features_dir/$stepdefs_dir must be a directory")
+  else
+    [[ -d "$target" ]] || errors+=("$target must be a directory")
+    [[ -d "$target/$stepdefs_dir" ]] || errors+=("$target/$stepdefs_dir must be a directory")
   fi
 
-  [[ -d "$1" ]] || echo "$1 must be a directory"
-  [[ -d "$1/$SHELLKIN_STEPDEFS_ROOT" ]] || echo "$1/$SHELLKIN_STEPDEFS_ROOT must be a directory"
+  if ((${#errors[@]} != 0)); then
+    VALIDATION_ERROR=$(printf '%s\n' "${errors[@]}")
+    return 1
+  fi
 }
 
 # :command.command_functions
-# :command.function
-shellkin_test_command() {
-
-  # src/commands/test.sh
-  target="$(realpath "${args['target']}")"
-  stepdefs_dir=
-  support_status=0
-  feature_status=0
-
-  STEPDEF_TYPES=()
-  STEPDEF_PATTERNS=()
-  STEPDEF_REGEXES=()
-  STEPDEF_TOKENS_LIST=()
-  STEPDEF_BODIES=()
-  TEST_SCENARIOS_TOTAL=0
-  TEST_SCENARIOS_FAILED=0
-  TEST_FAIL_FAST="${args[--fail-fast]:-0}"
-  TEST_ABORT_RUN=0
-
-  if [[ -f $target ]]; then
-    features_dir="$(dirname "$target")"
-    feature_files=("$target")
-  else
-    features_dir="$target"
-    readarray -t feature_files < <(find "$features_dir" -maxdepth 1 -type f -name '*.feature' | sort)
-  fi
-
-  stepdefs_dir="$features_dir/$SHELLKIN_STEPDEFS_ROOT"
-
-  support_file_source "$features_dir" || support_status=1
-
-  if ((support_status != 0)); then
-    return "$support_status"
-  fi
-
-  readarray -t stepdef_files < <(find "$stepdefs_dir" -maxdepth 1 -type f \( -name '*.sh' -o -name '*.bash' \) | sort)
-
-  for stepdef_file in "${stepdef_files[@]}"; do
-    stepdefs_file_parse "$stepdef_file"
-  done
-
-  for feature_file in "${feature_files[@]}"; do
-    feature_run "$feature_file" || feature_status=1
-    if ((TEST_ABORT_RUN != 0)); then
-      break
-    fi
-  done
-
-  output_summary "$TEST_SCENARIOS_TOTAL" "$TEST_SCENARIOS_FAILED"
-
-  return "$feature_status"
-
-}
-
-# :command.function
-shellkin_validate_command() {
-
-  # src/commands/validate.sh
-  target="$(realpath "${args['target']}")"
-  stepdefs_dir=
-  support_status=0
-  validation_status=0
-  validation_total=0
-  validation_failed=0
-
-  STEPDEF_TYPES=()
-  STEPDEF_PATTERNS=()
-  STEPDEF_REGEXES=()
-  STEPDEF_TOKENS_LIST=()
-  STEPDEF_BODIES=()
-
-  if [[ -f $target ]]; then
-    features_dir="$(dirname "$target")"
-    feature_files=("$target")
-  else
-    features_dir="$target"
-    readarray -t feature_files < <(find "$features_dir" -maxdepth 1 -type f -name '*.feature' | sort)
-  fi
-
-  stepdefs_dir="$features_dir/$SHELLKIN_STEPDEFS_ROOT"
-  VALIDATION_FEATURES_DIR="$features_dir"
-  VALIDATION_STEPDEFS_DIR="$stepdefs_dir"
-
-  support_file_source "$features_dir" || support_status=1
-
-  if ((support_status != 0)); then
-    return "$support_status"
-  fi
-
-  readarray -t stepdef_files < <(find "$stepdefs_dir" -maxdepth 1 -type f \( -name '*.sh' -o -name '*.bash' \) | sort)
-
-  for stepdef_file in "${stepdef_files[@]}"; do
-    ((validation_total += 1))
-    output_validate_file_start "stepdefs" "$(validation_stepdef_relpath "$stepdef_file")"
-
-    if stepdefs_file_parse "$stepdef_file"; then
-      output_validate_ok "step definitions"
-    else
-      output_validate_fail "step definitions"
-      output_validate_detail "invalid step definition file"
-      validation_status=1
-      ((validation_failed += 1))
-    fi
-  done
-
-  for feature_file in "${feature_files[@]}"; do
-    ((validation_total += 1))
-    output_validate_file_start "file" "$(validation_feature_relpath "$feature_file")"
-
-    if feature_validate "$feature_file"; then
-      output_validate_ok "feature"
-    else
-      output_validate_fail "feature"
-      if [[ -n ${FEATURE_VALIDATION_LINE:-} ]]; then
-        output_validate_detail "line ${FEATURE_VALIDATION_LINE}: ${FEATURE_VALIDATION_MESSAGE}"
-      fi
-      if [[ -n ${FEATURE_VALIDATION_CONTEXT:-} ]]; then
-        output_validate_source_line "${FEATURE_VALIDATION_CONTEXT}"
-      elif [[ -n ${FEATURE_VALIDATION_MESSAGE:-} && -z ${FEATURE_VALIDATION_LINE:-} ]]; then
-        output_validate_detail "$FEATURE_VALIDATION_MESSAGE"
-      fi
-      validation_status=1
-      ((validation_failed += 1))
-    fi
-  done
-
-  output_validate_summary "$validation_total" "$validation_failed"
-
-  return "$validation_status"
-
-}
 
 # :command.parse_requirements
 parse_requirements() {
   local key
 
+  # :command.argfile_filter
+  load_command_argfile ".shellkin" "$@"
+  set -- "${argfile_input[@]}"
+
   # :command.fixed_flags_filter
   while [[ $# -gt 0 ]]; do
     key="$1"
     case "$key" in
-      --version | -v)
+      --version)
         version_command
         exit
         ;;
@@ -1425,86 +1427,8 @@ parse_requirements() {
     esac
   done
 
-  # :command.environment_variables_filter
-  # :command.environment_variables_default
-  export SHELLKIN_FEATURES_ROOT="${SHELLKIN_FEATURES_ROOT:-features}"
-  export SHELLKIN_STEPDEFS_ROOT="${SHELLKIN_STEPDEFS_ROOT:-step_definitions}"
-  export SHELLKIN_SUPPORT_FILE="${SHELLKIN_SUPPORT_FILE:-support.sh}"
-
   # :command.command_filter
-  action=${1:-}
-
-  case $action in
-
-    test | t)
-      action="test"
-      shift
-      shellkin_test_parse_requirements "$@"
-      shift $#
-      ;;
-
-    validate | v)
-      action="validate"
-      shift
-      shellkin_validate_parse_requirements "$@"
-      shift $#
-      ;;
-
-    # :command.command_fallback
-    *)
-      action="test"
-      shellkin_test_parse_requirements "$@"
-      shift $#
-      ;;
-
-  esac
-
-  # :command.parse_requirements_while
-  while [[ $# -gt 0 ]]; do
-    key="$1"
-    case "$key" in
-
-      -?*)
-        printf "invalid option: %s\n" "$key" >&2
-        exit 1
-        ;;
-
-      *)
-        # :command.parse_requirements_case
-        # :command.parse_requirements_case_simple
-        printf "invalid argument: %s\n" "$key" >&2
-        exit 1
-
-        ;;
-
-    esac
-  done
-
-}
-
-# :command.parse_requirements
-shellkin_test_parse_requirements() {
-  local key
-
-  # :command.fixed_flags_filter
-  while [[ $# -gt 0 ]]; do
-    key="$1"
-    case "$key" in
-      --help | -h)
-        long_usage=yes
-        shellkin_test_usage
-        exit
-        ;;
-
-      *)
-        break
-        ;;
-
-    esac
-  done
-
-  # :command.command_filter
-  action="test"
+  action="root"
 
   # :command.parse_requirements_while
   while [[ $# -gt 0 ]]; do
@@ -1518,6 +1442,61 @@ shellkin_test_parse_requirements() {
         shift
         ;;
 
+      # :flag.case
+      --validate | -v)
+
+        # :flag.case_no_arg
+        args['--validate']=1
+        shift
+        ;;
+
+      # :flag.case
+      --default-target | -t)
+
+        # :flag.case_arg
+        if [[ -n ${2+x} ]]; then
+          args['--default-target']="$2"
+          shift
+          shift
+        else
+          printf "%s\n" "--default-target requires an argument: --default-target, -t DIR" >&2
+          exit 1
+        fi
+        ;;
+
+      # :flag.case
+      --stepdefs | -s)
+
+        # :flag.case_arg
+        if [[ -n ${2+x} ]]; then
+          args['--stepdefs']="$2"
+          shift
+          shift
+        else
+          printf "%s\n" "--stepdefs requires an argument: --stepdefs, -s DIR" >&2
+          exit 1
+        fi
+        ;;
+
+      # :flag.case
+      --load | -l)
+
+        # :flag.case_arg
+        if [[ -n ${2+x} ]]; then
+          escaped="$(printf '%q' "$2")"
+          if [[ -z ${args['--load']+x} ]]; then
+            args['--load']="$escaped"
+          else
+            args['--load']="${args['--load']} $escaped"
+          fi
+          shift
+          shift
+        else
+          printf "%s\n" "--load requires an argument: --load, -l SUPPORT_SCRIPT" >&2
+          exit 1
+        fi
+        ;;
+
       -?*)
         printf "invalid option: %s\n" "$key" >&2
         exit 1
@@ -1541,83 +1520,8 @@ shellkin_test_parse_requirements() {
   done
 
   # :command.default_assignments
-  [[ -n ${args['target']:-} ]] || args['target']="$SHELLKIN_FEATURES_ROOT"
-
-  # :command.validations
-  # :argument.validations
-  if [[ -v args['target'] ]]; then
-    validation_output="$(validate_test_target "${args['target']:-}")"
-    if [[ -n "$validation_output" ]]; then
-      printf "validation error in %s:\n%s\n" "TARGET" "$validation_output" >&2
-      exit 1
-    fi
-  fi
-
-}
-
-# :command.parse_requirements
-shellkin_validate_parse_requirements() {
-  local key
-
-  # :command.fixed_flags_filter
-  while [[ $# -gt 0 ]]; do
-    key="$1"
-    case "$key" in
-      --help | -h)
-        long_usage=yes
-        shellkin_validate_usage
-        exit
-        ;;
-
-      *)
-        break
-        ;;
-
-    esac
-  done
-
-  # :command.command_filter
-  action="validate"
-
-  # :command.parse_requirements_while
-  while [[ $# -gt 0 ]]; do
-    key="$1"
-    case "$key" in
-
-      -?*)
-        printf "invalid option: %s\n" "$key" >&2
-        exit 1
-        ;;
-
-      *)
-        # :command.parse_requirements_case
-        # :command.parse_requirements_case_simple
-        # :argument.case
-        if [[ -z ${args['target']+x} ]]; then
-          args['target']=$1
-          shift
-        else
-          printf "invalid argument: %s\n" "$key" >&2
-          exit 1
-        fi
-
-        ;;
-
-    esac
-  done
-
-  # :command.default_assignments
-  [[ -n ${args['target']:-} ]] || args['target']="$SHELLKIN_FEATURES_ROOT"
-
-  # :command.validations
-  # :argument.validations
-  if [[ -v args['target'] ]]; then
-    validation_output="$(validate_test_target "${args['target']:-}")"
-    if [[ -n "$validation_output" ]]; then
-      printf "validation error in %s:\n%s\n" "TARGET" "$validation_output" >&2
-      exit 1
-    fi
-  fi
+  [[ -n ${args['--default-target']:-} ]] || args['--default-target']="features"
+  [[ -n ${args['--stepdefs']:-} ]] || args['--stepdefs']="step_definitions"
 
 }
 
@@ -1625,11 +1529,6 @@ shellkin_validate_parse_requirements() {
 initialize() {
   declare -g version="0.1.2"
   set -eo pipefail
-
-  # :command.environment_variables_default
-  export SHELLKIN_FEATURES_ROOT="${SHELLKIN_FEATURES_ROOT:-features}"
-  export SHELLKIN_STEPDEFS_ROOT="${SHELLKIN_STEPDEFS_ROOT:-step_definitions}"
-  export SHELLKIN_SUPPORT_FILE="${SHELLKIN_SUPPORT_FILE:-support.sh}"
 
 }
 
@@ -1644,8 +1543,7 @@ bashly_run() {
   parse_requirements "${input[@]}"
 
   case "$action" in
-    "test") shellkin_test_command ;;
-    "validate") shellkin_validate_command ;;
+    "root") root_command ;;
   esac
 }
 

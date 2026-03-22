@@ -1,3 +1,4 @@
+## Converts a feature file path to a display path relative to the target root.
 validation_feature_relpath() {
   local file=$1
 
@@ -8,6 +9,7 @@ validation_feature_relpath() {
   fi
 }
 
+## Converts a step definition file path to a display path relative to the stepdefs root.
 validation_stepdef_relpath() {
   local file=$1
 
@@ -18,6 +20,7 @@ validation_stepdef_relpath() {
   fi
 }
 
+## Prints the heading for one validation target.
 output_validate_file_start() {
   local label=$1
   local path=$2
@@ -25,26 +28,31 @@ output_validate_file_start() {
   bold "\n$label: $path"
 }
 
+## Prints a passing validation result line.
 output_validate_ok() {
   green "  ✓ $1"
 }
 
+## Prints a failing validation result line.
 output_validate_fail() {
   red "  ✗ $1"
 }
 
+## Prints one indented validation detail line.
 output_validate_detail() {
   local detail=$1
 
   printf '    %s\n' "$detail"
 }
 
+## Prints one highlighted source line for validation context.
 output_validate_source_line() {
   local source_line=$1
 
   blue "    $source_line"
 }
 
+## Prints the final summary for a validation run.
 output_validate_summary() {
   local total_files=$1
   local failed_files=$2

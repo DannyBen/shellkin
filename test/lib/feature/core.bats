@@ -5,7 +5,7 @@ load ../../test_helper.bash
 setup() {
   setup_test_environment
   eval "$(declare -f run | sed '1s/^run /bats_run /')"
-  source_libs core/colors core/trim syntax/pattern syntax/stepdef syntax/feature file/stepdefs user_helpers/run user_helpers/fail user_helpers/defer runtime/step output/test file/feature
+  source_libs core/colors core/trim stepdef/pattern stepdef/parse feature/syntax stepdef/files user_helpers/run user_helpers/fail user_helpers/defer step/core output/test feature/core
 
   STEPDEF_TYPES=()
   STEPDEF_PATTERNS=()

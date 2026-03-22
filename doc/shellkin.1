@@ -4,29 +4,33 @@
 .SH NAME
 \f[B]shellkin\f[R] \- Gherkin\-style BDD Test Framework for Bash Scripts
 .SH SYNOPSIS
-\f[B]shellkin\f[R] [COMMAND]
+\f[B]shellkin\f[R] TARGET OPTIONS
 .SH DESCRIPTION
-Gherkin\-style BDD Test Framework for Bash Scripts
-.SH COMMANDS
-.SS shellkin test
-Run feature tests
-.SS shellkin validate
-Validate feature files and step definition files
-.SH ENVIRONMENT VARIABLES
-.SS SHELLKIN_FEATURES_ROOT
-Path to features directory (relative to working directory)
+Gherkin\-style BDD Test Framework for Bash Scripts Supports
+configuration from a .shellkin argfile in the working directory
+.SH ARGUMENTS
+.SS TARGET
+Path to features directory or a single feature file Default: value of
+\-\-default\-target
+.SH OPTIONS
+.SS \-\-fail\-fast, \-f
+Abort after the first failing scenario
+.SS \-\-validate, \-v
+Validate feature and step definition files
+.SS \-\-default\-target, \-t DIR
+Path to features directory (relative to working directory) This flag is
+normally only used in a .shellkin argfile
 .IP \(bu 2
 Default Value: \f[B]features\f[R]
-.SS SHELLKIN_STEPDEFS_ROOT
+.SS \-\-stepdefs, \-s DIR
 Path to step definitions directory (relative to features root)
 .IP \(bu 2
 Default Value: \f[B]step_definitions\f[R]
-.SS SHELLKIN_SUPPORT_FILE
+.SS \-\-load, \-l SUPPORT_SCRIPT
 Path to support script for step definitions (relative to features root)
 .IP \(bu 2
-Default Value: \f[B]support.sh\f[R]
+\f[I]Repeatable\f[R]
 .SH SEE ALSO
-\f[B]shellkin\-test\f[R](1), \f[B]shellkin\-validate\f[R](1),
 \f[B]shellkin\-stepdefs\f[R](5), \f[B]shellkin\-feature\f[R](5)
 .SH SOURCE CODE
 https://github.com/dannyben/shellkin

@@ -14,7 +14,7 @@ Feature: --help
 
 Scenario: Run --help
   When I run 'shellkin --help'
-  Then the output should include 'shellkin COMMAND'
+  Then the output should include 'shellkin [TARGET] [OPTIONS]'
 ```
 
 and back them with shell step definitions:
@@ -36,8 +36,8 @@ Indenting the step body is recommended for readability, but optional.
 This setup script will download the latest shellkin release executable as well
 as the man pages.
 
-```shell
-$ curl -Ls get.dannyb.co/shellkin/setup | bash
+```bash
+curl -Ls get.dannyb.co/shellkin/setup | bash
 ```
 
 Feel free to inspect the [setup script](setup) before running.
@@ -63,7 +63,7 @@ through the repository `features/` directory.
 Implemented pieces include:
 
 - feature discovery from a directory or a single `.feature` file
-- optional support script loading from `support.sh`
+- optional support script loading with `--load`
 - step definition loading from `step_definitions/*.sh` and `*.bash`
 - step matching with `{token}` placeholders
 - `Background`, `Scenario`, `Given` / `When` / `Then`, `And` / `But`, and `*`
@@ -93,26 +93,49 @@ Implemented pieces include:
 
 ```bash
 # Run all repo features:
-shellkin test
+shellkin
 
 # Validate feature and step definition files without executing steps:
-shellkin validate
+shellkin --validate
 
 # Stop after the first failing scenario:
-shellkin test --fail-fast
+shellkin --fail-fast
 
 # Run a specific directory:
-shellkin test path/to/features
+shellkin path/to/features
 
 # Run a single feature file:
-shellkin test path/to/features/example.feature
+shellkin path/to/features/example.feature
 ```
 
 When a step fails, the remaining steps in that scenario are marked as skipped
 and are not executed.
 
-Use `shellkin validate` to check feature structure and step-definition matching
+Use `shellkin --validate` to check feature structure and step-definition matching
 without running any step bodies.
+
+## Configuration with `.shellkin`
+
+Shellkin supports configuration from a `.shellkin` argfile in the current
+working directory.
+
+This is useful for project-level defaults such as the default target,
+step-definitions directory, and support files:
+
+```text
+--default-target tests
+--stepdefs steps
+--load first_support.sh
+--load second_support.sh
+```
+
+The argfile format is intentionally simple:
+
+- Empty lines are ignored
+- Lines starting with `#` are ignored
+- Each other line becomes one argument
+- A flag and value can be written on one line or on two lines
+- Matching outer quotes are stripped
 
 ## AI Agent Skill
 
@@ -145,26 +168,24 @@ Shellkin expects this structure:
 
 ```text
 features/
-├── support.sh
 ├── step_definitions/
 │   └── core.sh
 └── example.feature
 ```
 
 - Feature files live in the target directory.
-- If present, `support.sh` is sourced before step definitions are loaded.
 - Step definitions live in `step_definitions/` under that same directory.
-- Set `SHELLKIN_SUPPORT_FILE` to change the support script name relative to the
-  features directory.
+- Support files are loaded only when passed with `--load`.
+- `--stepdefs` and `--load` paths are relative to the features directory.
 
 ## Step Definitions
 
 Step definitions are shell snippets declared in files under
 `step_definitions/`.
 
-To share helper functions across step definition files, place them in
-`support.sh` in the features directory. Shellkin sources this file before it
-loads step definitions. You can rename it with `SHELLKIN_SUPPORT_FILE`.
+To share helper functions across step definition files, place them in a support
+script under the features directory and load it with `--load` or through
+`.shellkin`.
 
 ```bash
 @When I run '{command}'
@@ -270,7 +291,7 @@ and the [rush features](https://github.com/DannyBen/rush/tree/master/features).
 If you used the setup script, you can run this uninstall script:
 
 ```shell
-$ curl -Ls get.dannyb.co/shellkin/uninstall | bash
+curl -Ls get.dannyb.co/shellkin/uninstall | bash
 ```
 
 ## Contributing / Support

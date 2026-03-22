@@ -1,13 +1,23 @@
+## Validates that a target path and step definitions directory are usable.
 validate_test_target() {
+  local target=$1
+  local stepdefs_dir=$2
   local features_dir
+  local -a errors=()
 
-  if [[ -f "$1" ]]; then
-    features_dir=$(dirname "$1")
-    [[ $1 == *.feature ]] || echo "$1 must be a .feature file"
-    [[ -d "$features_dir/$SHELLKIN_STEPDEFS_ROOT" ]] || echo "$features_dir/$SHELLKIN_STEPDEFS_ROOT must be a directory"
-    return 0
+  VALIDATION_ERROR=
+
+  if [[ -f "$target" ]]; then
+    features_dir=$(dirname "$target")
+    [[ $target == *.feature ]] || errors+=("$target must be a .feature file or a directory")
+    [[ -d "$features_dir/$stepdefs_dir" ]] || errors+=("$features_dir/$stepdefs_dir must be a directory")
+  else
+    [[ -d "$target" ]] || errors+=("$target must be a directory")
+    [[ -d "$target/$stepdefs_dir" ]] || errors+=("$target/$stepdefs_dir must be a directory")
   fi
 
-  [[ -d "$1" ]] || echo "$1 must be a directory"
-  [[ -d "$1/$SHELLKIN_STEPDEFS_ROOT" ]] || echo "$1/$SHELLKIN_STEPDEFS_ROOT must be a directory"
+  if ((${#errors[@]} != 0)); then
+    VALIDATION_ERROR=$(printf '%s\n' "${errors[@]}")
+    return 1
+  fi
 }

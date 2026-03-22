@@ -4,7 +4,7 @@ load ../../test_helper.bash
 
 setup() {
   setup_test_environment
-  source_libs core/trim syntax/pattern syntax/stepdef file/stepdefs
+  source_libs core/trim stepdef/pattern stepdef/parse stepdef/files
 
   STEPDEF_TYPES=()
   STEPDEF_PATTERNS=()

@@ -1,3 +1,4 @@
+## Executes all scenarios in a feature file.
 feature_run() {
   local feature_file=$1
   local line
@@ -140,7 +141,8 @@ feature_run() {
   return "$failed"
 }
 
-feature_recorded_step_parse() {
+## Splits a recorded step into keyword, text, and optional doc string.
+feature__recorded_step_parse() {
   local recorded=$1
   local remainder
 
@@ -156,25 +158,27 @@ feature_recorded_step_parse() {
   fi
 }
 
+## Validates that a recorded step can be resolved and matched.
 feature_recorded_step_validate() {
   local recorded=$1
   local previous_type=$2
   local resolved_type
 
-  feature_recorded_step_parse "$recorded"
+  feature__recorded_step_parse "$recorded"
 
   resolved_type=$(feature_step_type_resolve "$previous_type" "$FEATURE_RECORDED_STEP_KEYWORD") || return 1
   FEATURE_PREVIOUS_STEP_TYPE=$resolved_type
   step_match "$resolved_type" "$FEATURE_RECORDED_STEP_TEXT"
 }
 
+## Executes a recorded step and reports its result.
 feature_recorded_step_run() {
   local recorded=$1
   local previous_type=$2
   local resolved_type
   local status
 
-  feature_recorded_step_parse "$recorded"
+  feature__recorded_step_parse "$recorded"
 
   resolved_type=$(feature_step_type_resolve "$previous_type" "$FEATURE_RECORDED_STEP_KEYWORD") || return 1
   FEATURE_PREVIOUS_STEP_TYPE=$resolved_type
@@ -189,6 +193,7 @@ feature_recorded_step_run() {
   return "$status"
 }
 
+## Stores the current feature validation error details.
 feature_validation_set_error() {
   local line_number=$1
   local message=$2
@@ -199,6 +204,7 @@ feature_validation_set_error() {
   FEATURE_VALIDATION_CONTEXT=$context_line
 }
 
+## Validates that all recorded steps in a scenario have matching step definitions.
 feature_scenario_validate() {
   local -n background_steps_ref=$1
   local -n background_lines_ref=$2
@@ -214,7 +220,7 @@ feature_scenario_validate() {
     if feature_recorded_step_validate "$step" "$FEATURE_PREVIOUS_STEP_TYPE"; then
       :
     else
-      feature_recorded_step_parse "$step"
+      feature__recorded_step_parse "$step"
       feature_validation_set_error "${background_lines_ref[$index]}" "no matching step definition for" "$FEATURE_RECORDED_STEP_KEYWORD $FEATURE_RECORDED_STEP_TEXT"
       return 1
     fi
@@ -225,13 +231,14 @@ feature_scenario_validate() {
     if feature_recorded_step_validate "$step" "$FEATURE_PREVIOUS_STEP_TYPE"; then
       :
     else
-      feature_recorded_step_parse "$step"
+      feature__recorded_step_parse "$step"
       feature_validation_set_error "${scenario_lines_ref[$index]}" "no matching step definition for" "$FEATURE_RECORDED_STEP_KEYWORD $FEATURE_RECORDED_STEP_TEXT"
       return 1
     fi
   done
 }
 
+## Validates the structure and step coverage of a feature file.
 feature_validate() {
   local feature_file=$1
   local line
@@ -381,6 +388,7 @@ feature_validate() {
   return "$failed"
 }
 
+## Runs one scenario together with its background steps.
 feature_scenario_run() {
   local scenario_name=$1
   local -n background_steps_ref=$2
@@ -397,7 +405,7 @@ feature_scenario_run() {
   set +e
   for step in "${background_steps_ref[@]}"; do
     if ((skip_remaining != 0)); then
-      feature_recorded_step_parse "$step"
+      feature__recorded_step_parse "$step"
       output_step_skipped "$FEATURE_RECORDED_STEP_KEYWORD" "$FEATURE_RECORDED_STEP_TEXT"
       continue
     fi
@@ -411,7 +419,7 @@ feature_scenario_run() {
   done
   for step in "${scenario_steps_ref[@]}"; do
     if ((skip_remaining != 0)); then
-      feature_recorded_step_parse "$step"
+      feature__recorded_step_parse "$step"
       output_step_skipped "$FEATURE_RECORDED_STEP_KEYWORD" "$FEATURE_RECORDED_STEP_TEXT"
       continue
     fi
@@ -439,6 +447,7 @@ feature_scenario_run() {
   return "$scenario_failed"
 }
 
+## Attaches a parsed doc string to the previous recorded step.
 feature_doc_string_apply() {
   local doc_string=$1
   local section=$2

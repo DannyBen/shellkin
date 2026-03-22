@@ -1,24 +1,24 @@
 @Given I am in a temp directory
-TEMP_DIR=$(mktemp -d)
-cd "$TEMP_DIR"
+  TEMP_DIR=$(mktemp -d)
+  cd "$TEMP_DIR"
 
 @When I fail deliberately
-false
+  false
 
 @Given setup fails
-false
+  false
 
 @When I run '{command}'
-PATH="$(pwd):$PATH" run "$command"
+  PATH="$(pwd):$PATH" run "$command"
 
 @Then the output should include '{text}'
-[[ "$LAST_STDOUT" == *"$text"* ]]
+  [[ "$LAST_STDOUT" == *"$text"* ]]
 
 @Then the output should match
-[[ "$LAST_STDOUT" == "$DOC_STRING" ]]
+  [[ "$LAST_STDOUT" == "$DOC_STRING" ]]
 
 @Then the file '{path}' should exist
-[[ -f "$path" ]]
+  [[ -f "$path" ]]
 
 @Then I announce '{text}'
-printf '%s' "$text"
+  printf '%s' "$text"

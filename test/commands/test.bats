@@ -10,7 +10,7 @@ teardown() {
   teardown_test_environment
 }
 
-@test "shellkin test runs feature files from the provided directory" {
+@test "shellkin runs feature files from the provided directory" {
   write_file features/sample.feature <<'EOF'
 Feature: Create a file
 
@@ -35,7 +35,7 @@ run "$command"
 [[ "$LAST_STDOUT" == *"$text"* ]]
 EOF
 
-  run "$SHELLKIN_REPO_ROOT/shellkin" test "$TEST_ROOT/features"
+  run "$SHELLKIN_REPO_ROOT/shellkin" "$TEST_ROOT/features"
 
   [ "$status" -eq 0 ]
   assert_output_contains "Feature: Create a file"
@@ -43,7 +43,7 @@ EOF
   assert_output_contains "1 scenario, 0 failing"
 }
 
-@test "shellkin test uses SHELLKIN_STEPDEFS_ROOT relative to the features root" {
+@test "shellkin uses --stepdefs relative to the features root" {
   write_file custom_features/sample.feature <<'EOF'
 Feature: Create a file
 
@@ -65,14 +65,14 @@ run "$command"
 [[ -f "$path" ]]
 EOF
 
-  run env SHELLKIN_STEPDEFS_ROOT=steps "$SHELLKIN_REPO_ROOT/shellkin" test "$TEST_ROOT/custom_features"
+  run "$SHELLKIN_REPO_ROOT/shellkin" --stepdefs steps "$TEST_ROOT/custom_features"
 
   [ "$status" -eq 0 ]
   assert_output_contains "Feature: Create a file"
   assert_output_contains "1 scenario, 0 failing"
 }
 
-@test "shellkin test sources the configured support file before running steps" {
+@test "shellkin loads the configured support file before running steps" {
   write_file custom_features/sample.feature <<'EOF'
 Feature: Create a file
 
@@ -100,14 +100,14 @@ run "$command"
 [[ -f "$path" ]]
 EOF
 
-  run env SHELLKIN_SUPPORT_FILE=helpers.sh "$SHELLKIN_REPO_ROOT/shellkin" test "$TEST_ROOT/custom_features"
+  run "$SHELLKIN_REPO_ROOT/shellkin" --load helpers.sh "$TEST_ROOT/custom_features"
 
   [ "$status" -eq 0 ]
   assert_output_contains "Feature: Create a file"
   assert_output_contains "1 scenario, 0 failing"
 }
 
-@test "shellkin test --fail-fast stops after the first failing scenario" {
+@test "shellkin --fail-fast stops after the first failing scenario" {
   write_file features/sample.feature <<'EOF'
 Feature: Fail fast
 
@@ -130,7 +130,7 @@ touch "$TEST_ROOT/chaos"
 touch "$TEST_ROOT/second-scenario"
 EOF
 
-  run "$SHELLKIN_REPO_ROOT/shellkin" test --fail-fast "$TEST_ROOT/features"
+  run "$SHELLKIN_REPO_ROOT/shellkin" --fail-fast "$TEST_ROOT/features"
 
   [ "$status" -eq 1 ]
   [ ! -e "$TEST_ROOT/chaos" ]
@@ -140,7 +140,7 @@ EOF
   assert_output_contains "1 scenario, 0 passing, 1 failing"
 }
 
-@test "shellkin test --fail-fast stops before later feature files when the first file ends with a failing scenario" {
+@test "shellkin --fail-fast stops before later feature files when the first file ends with a failing scenario" {
   write_file features/01-first.feature <<'EOF'
 Feature: First
 
@@ -163,7 +163,7 @@ return 1
 touch "$TEST_ROOT/second-feature-ran"
 EOF
 
-  run "$SHELLKIN_REPO_ROOT/shellkin" test --fail-fast "$TEST_ROOT/features"
+  run "$SHELLKIN_REPO_ROOT/shellkin" --fail-fast "$TEST_ROOT/features"
 
   [ "$status" -eq 1 ]
   [ ! -e "$TEST_ROOT/second-feature-ran" ]
@@ -171,7 +171,7 @@ EOF
   assert_output_contains "1 scenario, 0 passing, 1 failing"
 }
 
-@test "shellkin test runs deferred cleanup after a failing scenario" {
+@test "shellkin runs deferred cleanup after a failing scenario" {
   write_file features/sample.feature <<'EOF'
 Feature: Deferred cleanup
 
@@ -190,7 +190,7 @@ defer rm -rf "$TEMP_DIR"
 return 1
 EOF
 
-  run "$SHELLKIN_REPO_ROOT/shellkin" test "$TEST_ROOT/features"
+  run "$SHELLKIN_REPO_ROOT/shellkin" "$TEST_ROOT/features"
 
   path=$(cat "$TEST_ROOT/tempdir-path")
   [ "$status" -eq 1 ]
@@ -198,7 +198,7 @@ EOF
   assert_output_contains "1 scenario, 0 passing, 1 failing"
 }
 
-@test "shellkin test reports a deferred cleanup failure during execution" {
+@test "shellkin reports a deferred cleanup failure during execution" {
   write_file features/sample.feature <<'EOF'
 Feature: Deferred cleanup failure
 
@@ -211,7 +211,7 @@ EOF
 defer 'return 1'
 EOF
 
-  run "$SHELLKIN_REPO_ROOT/shellkin" test "$TEST_ROOT/features"
+  run "$SHELLKIN_REPO_ROOT/shellkin" "$TEST_ROOT/features"
 
   [ "$status" -eq 1 ]
   assert_output_contains "Deferred cleanup"
@@ -219,7 +219,7 @@ EOF
   assert_output_contains "deferred action failed: return 1"
 }
 
-@test "shellkin test reports a missing step definition during execution" {
+@test "shellkin reports a missing step definition during execution" {
   write_file features/sample.feature <<'EOF'
 Feature: Missing step definition
 
@@ -232,9 +232,55 @@ EOF
 run "$command"
 EOF
 
-  run "$SHELLKIN_REPO_ROOT/shellkin" test "$TEST_ROOT/features"
+  run "$SHELLKIN_REPO_ROOT/shellkin" "$TEST_ROOT/features"
 
   [ "$status" -eq 1 ]
   assert_output_contains "FAIL_MESSAGE:"
   assert_output_contains "no matching step definition for: Then I do not exist"
+}
+
+@test "shellkin does not load support files unless --load is provided" {
+  write_file custom_features/sample.feature <<'EOF'
+Feature: Explicit load only
+
+Scenario: Missing helper
+  Given I am in a prepared temp directory
+EOF
+
+  write_file custom_features/support.sh <<'EOF'
+prepare_temp_dir() {
+  TEMP_DIR=$(mktemp -d)
+  cd "$TEMP_DIR"
+}
+EOF
+
+  write_file custom_features/step_definitions/core.sh <<'EOF'
+@Given I am in a prepared temp directory
+prepare_temp_dir
+EOF
+
+  run "$SHELLKIN_REPO_ROOT/shellkin" "$TEST_ROOT/custom_features"
+
+  [ "$status" -eq 1 ]
+  assert_output_contains "prepare_temp_dir: command not found"
+}
+
+@test "shellkin --load fails when the file does not exist" {
+  write_file features/sample.feature <<'EOF'
+Feature: Missing load file
+
+Scenario: Example
+  Given anything
+EOF
+
+  write_file features/step_definitions/core.sh <<'EOF'
+@Given anything
+true
+EOF
+
+  run "$SHELLKIN_REPO_ROOT/shellkin" --load missing.sh "$TEST_ROOT/features"
+
+  [ "$status" -eq 1 ]
+  assert_output_contains "load file not found:"
+  assert_output_contains "$TEST_ROOT/features/missing.sh"
 }

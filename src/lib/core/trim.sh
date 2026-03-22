@@ -1,3 +1,4 @@
+## Removes leading and trailing whitespace from a string.
 trim() {
   local value="${1-}"
 
