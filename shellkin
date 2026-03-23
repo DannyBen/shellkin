@@ -56,6 +56,11 @@ root_command() {
   VALIDATION_FEATURES_DIR="$FEATURES_DIR"
   VALIDATION_STEPDEFS_DIR="$STEPDEFS_DIR"
 
+  support_file_source_if_present "$FEATURES_DIR" support.sh || {
+    printf '%s\n' "$SUPPORT_ERROR" >&2
+    return 1
+  }
+
   support_files_source_all "$FEATURES_DIR" "${load_paths[@]}" || {
     printf '%s\n' "$SUPPORT_ERROR" >&2
     return 1
@@ -162,19 +167,19 @@ shellkin_usage() {
 
     # :flag.usage
     printf "  %s\n" "$(green "--default-target, -t DIR")"
-    printf "    Path to features directory (relative to working directory)\n    This flag is normally only used in a .shellkin argfile\n"
+    printf "    Path to features directory\n    Relative to working directory\n    This flag is normally only used in a .shellkin argfile\n"
     printf "    %s\n" "Default: features"
     echo
 
     # :flag.usage
     printf "  %s\n" "$(green "--stepdefs, -s DIR")"
-    printf "    Path to step definitions directory (relative to features root)\n"
+    printf "    Path to step definitions directory\n    Relative to features root\n"
     printf "    %s\n" "Default: step_definitions"
     echo
 
     # :flag.usage
     printf "  %s\n" "$(green "--load, -l SUPPORT_SCRIPT (repeatable)")"
-    printf "    Path to support script for step definitions (relative to features root)\n"
+    printf "    Path to support script for step definitions\n    Relative to features root\n    support.sh is loaded automatically\n"
     echo
 
     # :command.usage_fixed_flags
@@ -1266,6 +1271,18 @@ support_files_source_all() {
   done
 }
 
+support_file_source_if_present() {
+  local features_dir=$1
+  local load_path=$2
+
+  support__file_resolve "$features_dir" "$load_path" || return 1
+
+  [[ -f $SUPPORT_FILE ]] || return 0
+
+  # shellcheck disable=SC1090
+  source "$SUPPORT_FILE"
+}
+
 support__file_resolve() {
   local features_dir=$1
   local load_path=$2
@@ -1287,7 +1304,7 @@ support__file_source() {
   support__file_resolve "$features_dir" "$load_path" || return 1
 
   if [[ ! -f $SUPPORT_FILE ]]; then
-    SUPPORT_ERROR="load file not found: $SUPPORT_FILE"
+    SUPPORT_ERROR="load file not found: $load_path"
     return 1
   fi
 

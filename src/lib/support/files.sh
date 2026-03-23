@@ -9,6 +9,19 @@ support_files_source_all() {
   done
 }
 
+## Sources one support file if it exists, otherwise succeeds silently.
+support_file_source_if_present() {
+  local features_dir=$1
+  local load_path=$2
+
+  support__file_resolve "$features_dir" "$load_path" || return 1
+
+  [[ -f $SUPPORT_FILE ]] || return 0
+
+  # shellcheck disable=SC1090
+  source "$SUPPORT_FILE"
+}
+
 ## Resolves one support file path relative to the features directory.
 support__file_resolve() {
   local features_dir=$1
@@ -32,7 +45,7 @@ support__file_source() {
   support__file_resolve "$features_dir" "$load_path" || return 1
 
   if [[ ! -f $SUPPORT_FILE ]]; then
-    SUPPORT_ERROR="load file not found: $SUPPORT_FILE"
+    SUPPORT_ERROR="load file not found: $load_path"
     return 1
   fi
 
