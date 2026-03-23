@@ -219,11 +219,11 @@ EOF
   [ "$(cat "$TEST_ROOT/doc_string.txt")" = $'first line\nsecond line' ]
 }
 
-@test "output_failure_block adds spacing around multiline values" {
-  output_failure_block "LAST_STDOUT" $'first line\nsecond line' >"$TEST_ROOT/output.txt"
+@test "output_error_report_field indents multiline values inside the report frame" {
+  output_error_report_field "LAST_STDOUT" $'first line\nsecond line' >"$TEST_ROOT/output.txt"
 
   output=$(strip_ansi <"$TEST_ROOT/output.txt")
-  [ "$output" = $'    LAST_STDOUT:\n\n      first line\n      second line' ]
+  [ "$output" = $'  │ LAST_STDOUT:\n  │\n  │   first line\n  │   second line' ]
 }
 
 @test "feature_run prints failure context for failed steps" {
@@ -252,13 +252,16 @@ EOF
 
   [ "$status" -eq 1 ]
   output=$(strip_ansi <"$TEST_ROOT/output.txt")
-  assert_output_contains "FAIL_MESSAGE:"
+  assert_output_contains "Error Report"
+  assert_output_contains "File: test.feature"
+  assert_output_contains "Step: Then the command should fail with a message"
+  assert_output_contains "FAIL_MESSAGE: invalid output detected"
   assert_output_contains "invalid output detected"
-  assert_output_contains "LAST_EXIT_CODE:"
+  assert_output_contains "LAST_EXIT_CODE: 7"
   assert_output_contains "7"
   assert_output_contains "LAST_STDOUT:"
   assert_output_contains "hello"
-  assert_output_contains "LAST_STDERR:"
+  assert_output_contains "LAST_STDERR: boom"
   assert_output_contains "boom"
 }
 
@@ -285,8 +288,12 @@ EOF
 
   [ "$status" -eq 1 ]
   output=$(strip_ansi <"$TEST_ROOT/output.txt")
+  assert_output_contains "Error Report"
+  assert_output_contains "File: test.feature"
+  assert_output_contains "Step: Then I do not exist"
   assert_output_contains "FAIL_MESSAGE:"
-  assert_output_contains "no matching step definition for: Then I do not exist"
+  assert_output_contains "No matching step definition for:"
+  assert_output_contains "Then I do not exist"
 }
 
 @test "feature_run prints a deferred failure message when cleanup fails" {
@@ -312,6 +319,9 @@ EOF
   [ "$status" -eq 1 ]
   output=$(strip_ansi <"$TEST_ROOT/output.txt")
   assert_output_contains "✗ Deferred cleanup"
+  assert_output_contains "Error Report"
+  assert_output_contains "File: test.feature"
+  assert_output_contains "Step: Deferred cleanup"
   assert_output_contains "FAIL_MESSAGE:"
   assert_output_contains "deferred action failed: return 1"
 }

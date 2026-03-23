@@ -56,7 +56,7 @@ step_run() {
     fi
   done
 
-  FAIL_MESSAGE="no matching step definition for: $type $text"
+  FAIL_MESSAGE=$'No matching step definition for:\n'"$type $text"
   export FAIL_MESSAGE
   return 1
 }

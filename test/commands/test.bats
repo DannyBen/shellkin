@@ -236,7 +236,8 @@ EOF
 
   [ "$status" -eq 1 ]
   assert_output_contains "FAIL_MESSAGE:"
-  assert_output_contains "no matching step definition for: Then I do not exist"
+  assert_output_contains "No matching step definition for:"
+  assert_output_contains "Then I do not exist"
 }
 
 @test "shellkin loads support.sh automatically when present" {
