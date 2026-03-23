@@ -239,12 +239,14 @@ EOF
   assert_output_contains "no matching step definition for: Then I do not exist"
 }
 
-@test "shellkin does not load support files unless --load is provided" {
+@test "shellkin loads support.sh automatically when present" {
   write_file custom_features/sample.feature <<'EOF'
-Feature: Explicit load only
+Feature: Auto-loaded support file
 
-Scenario: Missing helper
+Scenario: Prepared temp directory
   Given I am in a prepared temp directory
+  When I run 'touch somefile'
+  Then the file 'somefile' should exist
 EOF
 
   write_file custom_features/support.sh <<'EOF'
@@ -257,12 +259,19 @@ EOF
   write_file custom_features/step_definitions/core.sh <<'EOF'
 @Given I am in a prepared temp directory
 prepare_temp_dir
+
+@When I run '{command}'
+run "$command"
+
+@Then the file '{path}' should exist
+[[ -f "$path" ]]
 EOF
 
   run "$SHELLKIN_REPO_ROOT/shellkin" "$TEST_ROOT/custom_features"
 
-  [ "$status" -eq 1 ]
-  assert_output_contains "prepare_temp_dir: command not found"
+  [ "$status" -eq 0 ]
+  assert_output_contains "Feature: Auto-loaded support file"
+  assert_output_contains "1 scenario, 0 failing"
 }
 
 @test "shellkin --load fails when the file does not exist" {
@@ -281,6 +290,5 @@ EOF
   run "$SHELLKIN_REPO_ROOT/shellkin" --load missing.sh "$TEST_ROOT/features"
 
   [ "$status" -eq 1 ]
-  assert_output_contains "load file not found:"
-  assert_output_contains "$TEST_ROOT/features/missing.sh"
+  assert_output_contains "load file not found: missing.sh"
 }

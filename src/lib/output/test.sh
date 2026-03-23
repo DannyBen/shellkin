@@ -10,13 +10,7 @@ output_scenario_start() {
 
 ## Prints a formatted label inside a failure block.
 output_failure_label() {
-  local label=$1
-
-  if [[ "${NO_COLOR:-}" == "" ]]; then
-    printf '    \e[1m%s\e[0m' "$label"
-  else
-    printf '    %s' "$label"
-  fi
+  printf '    %s' "$(bold "$1")"
 }
 
 ## Prints one named failure detail value.

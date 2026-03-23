@@ -42,6 +42,11 @@ STEPDEFS_DIR="$FEATURES_DIR/$stepdefs_subdir"
 VALIDATION_FEATURES_DIR="$FEATURES_DIR"
 VALIDATION_STEPDEFS_DIR="$STEPDEFS_DIR"
 
+support_file_source_if_present "$FEATURES_DIR" support.sh || {
+  printf '%s\n' "$SUPPORT_ERROR" >&2
+  return 1
+}
+
 support_files_source_all "$FEATURES_DIR" "${load_paths[@]}" || {
   printf '%s\n' "$SUPPORT_ERROR" >&2
   return 1

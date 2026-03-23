@@ -49,7 +49,8 @@ Validate feature and step definition files
 --default-target, -t DIR
 --------------------------------------------------
 
-Path to features directory (relative to working directory)
+Path to features directory
+Relative to working directory
 This flag is normally only used in a .shellkin argfile
 
 
@@ -58,14 +59,19 @@ This flag is normally only used in a .shellkin argfile
 --stepdefs, -s DIR
 --------------------------------------------------
 
-Path to step definitions directory (relative to features root)
+Path to step definitions directory
+Relative to features root
+
 
 - Default Value: **step_definitions**
 
 --load, -l SUPPORT_SCRIPT
 --------------------------------------------------
 
-Path to support script for step definitions (relative to features root)
+Path to support script for step definitions
+Relative to features root
+A file named 'support.sh' in the features root is auto-loaded without this flag
+
 
 - *Repeatable*
 

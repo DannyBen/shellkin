@@ -22,19 +22,25 @@ flags:
 - long: --default-target
   short: -t
   help: |
-    Path to features directory (relative to working directory)
+    Path to features directory
+    Relative to working directory
     This flag is normally only used in a .shellkin argfile
   arg: dir
   default: features
 - long: --stepdefs
   short: -s
   arg: dir
-  help: Path to step definitions directory (relative to features root)
+  help: |
+    Path to step definitions directory
+    Relative to features root
   default: step_definitions
 - long: --load
   short: -l
   arg: support_script
-  help: Path to support script for step definitions (relative to features root)
+  help: |
+    Path to support script for step definitions
+    Relative to features root
+    support.sh is loaded automatically
   repeatable: true
 
 
