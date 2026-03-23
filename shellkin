@@ -887,7 +887,8 @@ output_feature_start() {
 }
 
 output_scenario_start() {
-  bold "\nScenario: $1"
+  printf "\n%s: %s\n" "$(bold Scenario)" "$1"
+  # bold "\nScenario: $1"
 }
 
 output_failure_label() {
