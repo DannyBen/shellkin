@@ -34,6 +34,8 @@ Shellkin is a Bashly-based Gherkin-style test framework for shell scripts.
 - Do not test private `__` helpers directly.
 - When file content is the subject of the test, prefer inline heredoc fixtures.
 - `write_file` in tests writes under `TEST_ROOT`.
+- In Shellkin feature roots, helper functions should go in `features/support.sh`.
+- If `features/support.sh` grows too large, keep it as the entrypoint, add a sibling `support/` directory organized by concern, and have `support.sh` source those files.
 
 ## Bashly Workflow
 
