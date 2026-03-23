@@ -167,19 +167,19 @@ shellkin_usage() {
 
     # :flag.usage
     printf "  %s\n" "$(green "--default-target, -t DIR")"
-    printf "    Path to features directory\n    Relative to working directory\n    This flag is normally only used in a .shellkin argfile\n"
+    printf "    Path to features directory  \n    Relative to working directory  \n    Normally only used in a .shellkin argfile\n"
     printf "    %s\n" "Default: features"
     echo
 
     # :flag.usage
     printf "  %s\n" "$(green "--stepdefs, -s DIR")"
-    printf "    Path to step definitions directory\n    Relative to features root\n"
+    printf "    Path to step definitions directory  \n    Relative to features root\n"
     printf "    %s\n" "Default: step_definitions"
     echo
 
     # :flag.usage
     printf "  %s\n" "$(green "--load, -l SUPPORT_SCRIPT (repeatable)")"
-    printf "    Path to support script for step definitions\n    Relative to features root\n    support.sh is loaded automatically\n"
+    printf "    Path to support script for step definitions  \n    Relative to features root  \n    support.sh is loaded automatically\n"
     echo
 
     # :command.usage_fixed_flags
@@ -195,7 +195,7 @@ shellkin_usage() {
 
     # :argument.usage
     printf "  %s\n" "$(green "TARGET")"
-    printf "    Path to features directory or a single feature file\n    Default: value of --default-target\n"
+    printf "    Path to features directory or a single feature file  \n    Default: value of --default-target\n"
     echo
 
   fi

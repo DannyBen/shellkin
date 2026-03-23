@@ -10,26 +10,34 @@ Gherkin\-style BDD Test Framework for Bash Scripts Supports
 configuration from a .shellkin argfile in the working directory
 .SH ARGUMENTS
 .SS TARGET
-Path to features directory or a single feature file Default: value of
-\-\-default\-target
+Path to features directory or a single feature file
+.PP
+Default: value of \-\-default\-target
 .SH OPTIONS
 .SS \-\-fail\-fast, \-f
 Abort after the first failing scenario
 .SS \-\-validate, \-v
 Validate feature and step definition files
 .SS \-\-default\-target, \-t DIR
-Path to features directory Relative to working directory This flag is
-normally only used in a .shellkin argfile
+Path to features directory
+.PP
+Relative to working directory
+.PP
+Normally only used in a .shellkin argfile
 .IP \(bu 2
 Default Value: \f[B]features\f[R]
 .SS \-\-stepdefs, \-s DIR
-Path to step definitions directory Relative to features root
+Path to step definitions directory
+.PP
+Relative to features root
 .IP \(bu 2
 Default Value: \f[B]step_definitions\f[R]
 .SS \-\-load, \-l SUPPORT_SCRIPT
-Path to support script for step definitions Relative to features root A
-file named \(aqsupport.sh\(aq in the features root is auto\-loaded
-without this flag
+Path to support script for step definitions
+.PP
+Relative to features root
+.PP
+support.sh is loaded automatically
 .IP \(bu 2
 \f[I]Repeatable\f[R]
 .SH SEE ALSO
