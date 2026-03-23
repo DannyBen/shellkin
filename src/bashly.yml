@@ -9,7 +9,14 @@ argfile: .shellkin
 args:
 - name: target
   help: |
-    Path to features directory or a single feature file
+    Target to test. Can be in one of these forms:
+
+    - DIR = Features directory
+    - FILE = *.feature file
+    - NUMBER = Scenario number in the default target
+    - DIR:NUMBER = Scenario number in DIR
+    - FILE:NUMBER = Scenario number in FILE
+
     Default: value of --default-target
 
 flags:
@@ -22,24 +29,24 @@ flags:
 - long: --default-target
   short: -t
   help: |
-    Path to features directory
-    Relative to working directory
-    This flag is normally only used in a .shellkin argfile
+    Path to features directory  
+    Relative to working directory  
+    Normally only used in a .shellkin argfile
   arg: dir
   default: features
 - long: --stepdefs
   short: -s
   arg: dir
   help: |
-    Path to step definitions directory
+    Path to step definitions directory  
     Relative to features root
   default: step_definitions
 - long: --load
   short: -l
   arg: support_script
   help: |
-    Path to support script for step definitions
-    Relative to features root
+    Path to support script for step definitions  
+    Relative to features root  
     support.sh is loaded automatically
   repeatable: true
 

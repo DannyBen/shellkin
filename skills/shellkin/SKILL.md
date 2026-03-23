@@ -16,8 +16,6 @@ When Shellkin is installed in the target environment, prefer the local man pages
 Check these first when you need Shellkin-specific facts:
 
 - `man shellkin`
-- `man shellkin-test`
-- `man shellkin-validate`
 - `man 5 shellkin-feature`
 - `man 5 shellkin-stepdefs`
 
@@ -38,8 +36,8 @@ If external reference is useful, Shellkin source code and documentation are avai
 4. Write feature files in Shellkin's supported Gherkin subset only.
    Use `Feature`, optional description text, `Background`, `Scenario`, and steps with `Given`/`When`/`Then` plus `And`/`But`/`*`.
 5. Validate before concluding.
-   Run `shellkin validate` first when changing step matching or feature structure.
-   Run `shellkin test` for execution checks when the environment allows it.
+   Run `shellkin --validate` first when changing step matching or feature structure.
+   Run `shellkin` on the narrowed target for execution checks when the environment allows it.
 
 ## Directory Model
 
@@ -49,12 +47,18 @@ Typical layout:
 
 ```text
 features/
+├── support.sh
+├── support/
+│   ├── output.sh
+│   └── filesystem.sh
 ├── step_definitions/
 │   └── core.sh
 └── example.feature
 ```
 
 When a task targets a single feature area, prefer placing the feature in the existing features tree rather than inventing a parallel layout.
+Place helper functions for a feature root in `support.sh`.
+If that file grows too large, keep `support.sh` as the entrypoint, add a sibling `support/` directory organized by concern, and have `support.sh` source those files.
 
 ## Feature Authoring Rules
 
@@ -113,6 +117,8 @@ Useful environment variables in step bodies:
 - If the project already has a "run command" step, reuse it.
 - Prefer steps phrased in user language, not internal function names.
 - Keep shell bodies straightforward and readable.
+- Put reusable helper functions in `support.sh`, not in step definition files.
+- If helper code outgrows `support.sh`, split it into a sibling `support/` directory by concern and source those files from `support.sh`.
 - Put setup in `Given`, actions in `When`, and assertions in `Then`.
 - Use doc strings for exact multiline matches instead of brittle escaped strings.
 - If a command is expected to fail, remember that `run` still succeeds; assert on `LAST_EXIT_CODE` or captured output.
@@ -122,8 +128,8 @@ Useful environment variables in step bodies:
 
 After edits:
 
-1. Run `shellkin validate` on the feature root or changed feature file.
-2. Run `shellkin test` on the narrowed target when practical.
+1. Run `shellkin --validate` on the feature root or changed feature file.
+2. Run `shellkin` on the narrowed target when practical.
 3. If a step does not match, check the step text, header text, token names, and the active features/stepdefs roots.
 
 ## References

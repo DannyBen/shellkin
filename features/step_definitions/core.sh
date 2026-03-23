@@ -11,13 +11,13 @@
   [[ -f "$path" ]]
 
 @Then the output should include '{text}'
-  [[ "$LAST_STDOUT" == *"$text"* ]]
+  [[ "$(printf '%s' "$LAST_STDOUT" | strip_ansi)" == *"$text"* ]]
 
 @Then the error output should include '{text}'
-  [[ "$LAST_STDERR" == *"$text"* ]]
+  [[ "$(printf '%s' "$LAST_STDERR" | strip_ansi)" == *"$text"* ]]
 
 @Then the output should match
-  [[ "$LAST_STDOUT" == "$DOC_STRING" ]]
+  [[ "$(printf '%s' "$LAST_STDOUT" | strip_ansi)" == "$DOC_STRING" ]]
 
 @Then the exit code should mean success
   [[ "$LAST_EXIT_CODE" -eq 0 ]]

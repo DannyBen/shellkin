@@ -12,7 +12,10 @@ fi
 # :command.root_command
 root_command() {
   # src/root_command.sh
-  target_input=${args['target']:-${args['--default-target']}}
+  target_arg=${args['target']:-}
+  default_target=${args['--default-target']}
+  target_input=
+  target_scenario=
   stepdefs_subdir=${args['--stepdefs']}
   fail_fast=${args['--fail-fast']:-0}
   validate_mode=${args['--validate']:-0}
@@ -28,7 +31,15 @@ root_command() {
     eval "load_paths=( $load_args )"
   fi
 
-  if ! validate_test_target "$target_input" "$stepdefs_subdir"; then
+  if ! parse_test_target "$target_arg" "$default_target"; then
+    printf 'validation error in TARGET:\n%s\n' "$VALIDATION_ERROR" >&2
+    return 1
+  fi
+
+  target_input=$TEST_TARGET_PATH
+  target_scenario=$TEST_TARGET_SCENARIO
+
+  if ! validate_test_target "$target_input" "$target_scenario" "$stepdefs_subdir"; then
     printf 'validation error in TARGET:\n%s\n' "$VALIDATION_ERROR" >&2
     return 1
   fi
@@ -69,6 +80,10 @@ root_command() {
   stepdefs_files_find "$STEPDEFS_DIR"
 
   if ((validate_mode != 0)); then
+    TARGET_SCENARIO_NUMBER=$target_scenario
+    TARGET_SCENARIO_MATCHED=0
+    VALIDATION_SCENARIOS_INDEX=0
+
     for stepdef_file in "${STEPDEF_FILES[@]}"; do
       ((validation_total += 1))
       output_validate_file_start "stepdefs" "$(validation_stepdef_relpath "$stepdef_file")"
@@ -104,6 +119,11 @@ root_command() {
       fi
     done
 
+    if [[ -n $target_scenario && $validation_status -eq 0 && $TARGET_SCENARIO_MATCHED -eq 0 ]]; then
+      printf 'validation error in TARGET:\nscenario number out of range: %s\n' "$target_scenario" >&2
+      return 1
+    fi
+
     output_validate_summary "$validation_total" "$validation_failed"
     return "$validation_status"
   else
@@ -111,6 +131,9 @@ root_command() {
       stepdefs_file_parse "$stepdef_file"
     done
 
+    TARGET_SCENARIO_NUMBER=$target_scenario
+    TARGET_SCENARIO_MATCHED=0
+    TEST_SCENARIOS_INDEX=0
     TEST_SCENARIOS_TOTAL=0
     TEST_SCENARIOS_FAILED=0
     TEST_FAIL_FAST="$fail_fast"
@@ -122,6 +145,11 @@ root_command() {
         break
       fi
     done
+
+    if [[ -n $target_scenario && $feature_status -eq 0 && $TARGET_SCENARIO_MATCHED -eq 0 ]]; then
+      printf 'validation error in TARGET:\nscenario number out of range: %s\n' "$target_scenario" >&2
+      return 1
+    fi
 
     output_summary "$TEST_SCENARIOS_TOTAL" "$TEST_SCENARIOS_FAILED"
     return "$feature_status"
@@ -167,19 +195,19 @@ shellkin_usage() {
 
     # :flag.usage
     printf "  %s\n" "$(green "--default-target, -t DIR")"
-    printf "    Path to features directory\n    Relative to working directory\n    This flag is normally only used in a .shellkin argfile\n"
+    printf "    Path to features directory  \n    Relative to working directory  \n    Normally only used in a .shellkin argfile\n"
     printf "    %s\n" "Default: features"
     echo
 
     # :flag.usage
     printf "  %s\n" "$(green "--stepdefs, -s DIR")"
-    printf "    Path to step definitions directory\n    Relative to features root\n"
+    printf "    Path to step definitions directory  \n    Relative to features root\n"
     printf "    %s\n" "Default: step_definitions"
     echo
 
     # :flag.usage
     printf "  %s\n" "$(green "--load, -l SUPPORT_SCRIPT (repeatable)")"
-    printf "    Path to support script for step definitions\n    Relative to features root\n    support.sh is loaded automatically\n"
+    printf "    Path to support script for step definitions  \n    Relative to features root  \n    support.sh is loaded automatically\n"
     echo
 
     # :command.usage_fixed_flags
@@ -195,7 +223,7 @@ shellkin_usage() {
 
     # :argument.usage
     printf "  %s\n" "$(green "TARGET")"
-    printf "    Path to features directory or a single feature file\n    Default: value of --default-target\n"
+    printf "    Target to test. Can be in one of these forms:\n    \n    - DIR = Features directory\n    - FILE = *.feature file\n    - NUMBER = Scenario number in the default target\n    - DIR:NUMBER = Scenario number in DIR\n    - FILE:NUMBER = Scenario number in FILE\n    \n    Default: value of --default-target\n"
     echo
 
   fi
@@ -553,6 +581,12 @@ feature_scenario_validate() {
   local step
   local index
 
+  ((VALIDATION_SCENARIOS_INDEX += 1))
+  if [[ -n ${TARGET_SCENARIO_NUMBER:-} && $VALIDATION_SCENARIOS_INDEX -ne $TARGET_SCENARIO_NUMBER ]]; then
+    return 0
+  fi
+
+  TARGET_SCENARIO_MATCHED=1
   FEATURE_PREVIOUS_STEP_TYPE=
 
   for index in "${!background_steps_ref[@]}"; do
@@ -731,14 +765,22 @@ feature_scenario_run() {
   local scenario_name=$1
   local -n background_steps_ref=$2
   local -n scenario_steps_ref=$3
+  local scenario_number
   local step
   local scenario_failed=0
   local skip_remaining=0
 
+  ((TEST_SCENARIOS_INDEX += 1))
+  scenario_number=$TEST_SCENARIOS_INDEX
+  if [[ -n ${TARGET_SCENARIO_NUMBER:-} && $scenario_number -ne $TARGET_SCENARIO_NUMBER ]]; then
+    return 0
+  fi
+
+  TARGET_SCENARIO_MATCHED=1
   ((TEST_SCENARIOS_TOTAL += 1))
   FEATURE_PREVIOUS_STEP_TYPE=
   SCENARIO_DEFERRED_COMMANDS=()
-  output_scenario_start "$scenario_name"
+  output_scenario_start "$scenario_number" "$scenario_name"
 
   set +e
   for step in "${background_steps_ref[@]}"; do
@@ -887,7 +929,7 @@ output_feature_start() {
 }
 
 output_scenario_start() {
-  bold "\nScenario: $1"
+  printf "\n%s %s: %s\n" "$(bold Scenario)" "$(cyan_bold "$1")" "$2"
 }
 
 output_failure_label() {
@@ -1383,13 +1425,52 @@ run() {
 }
 
 # src/lib/validations/validate_test_target.sh
+parse_test_target() {
+  local target_input=$1
+  local default_target=$2
+
+  VALIDATION_ERROR=
+  TEST_TARGET_PATH=
+  TEST_TARGET_SCENARIO=
+
+  if [[ -z $target_input ]]; then
+    TEST_TARGET_PATH=$default_target
+    return 0
+  fi
+
+  if [[ $target_input =~ ^[0-9]+$ ]]; then
+    TEST_TARGET_PATH=$default_target
+    TEST_TARGET_SCENARIO=$target_input
+    validate_test_target__scenario_number_validate "$TEST_TARGET_SCENARIO" || return 1
+    return 0
+  fi
+
+  if [[ $target_input == *:* ]]; then
+    TEST_TARGET_PATH=${target_input%:*}
+    TEST_TARGET_SCENARIO=${target_input##*:}
+
+    if [[ -n $TEST_TARGET_PATH && $TEST_TARGET_SCENARIO != "$target_input" ]]; then
+      validate_test_target__scenario_number_validate "$TEST_TARGET_SCENARIO" || return 1
+      return 0
+    fi
+  fi
+
+  TEST_TARGET_PATH=$target_input
+  TEST_TARGET_SCENARIO=
+}
+
 validate_test_target() {
   local target=$1
-  local stepdefs_dir=$2
+  local scenario_number=$2
+  local stepdefs_dir=$3
   local features_dir
   local -a errors=()
 
   VALIDATION_ERROR=
+
+  if [[ -n $scenario_number ]]; then
+    validate_test_target__scenario_number_validate "$scenario_number" || return 1
+  fi
 
   if [[ -f "$target" ]]; then
     features_dir=$(dirname "$target")
@@ -1402,6 +1483,15 @@ validate_test_target() {
 
   if ((${#errors[@]} != 0)); then
     VALIDATION_ERROR=$(printf '%s\n' "${errors[@]}")
+    return 1
+  fi
+}
+
+validate_test_target__scenario_number_validate() {
+  local scenario_number=$1
+
+  if [[ ! $scenario_number =~ ^[1-9][0-9]*$ ]]; then
+    VALIDATION_ERROR="scenario number must be a positive integer: $scenario_number"
     return 1
   fi
 }

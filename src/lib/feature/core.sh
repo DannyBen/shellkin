@@ -213,6 +213,12 @@ feature_scenario_validate() {
   local step
   local index
 
+  ((VALIDATION_SCENARIOS_INDEX += 1))
+  if [[ -n ${TARGET_SCENARIO_NUMBER:-} && $VALIDATION_SCENARIOS_INDEX -ne $TARGET_SCENARIO_NUMBER ]]; then
+    return 0
+  fi
+
+  TARGET_SCENARIO_MATCHED=1
   FEATURE_PREVIOUS_STEP_TYPE=
 
   for index in "${!background_steps_ref[@]}"; do
@@ -393,14 +399,22 @@ feature_scenario_run() {
   local scenario_name=$1
   local -n background_steps_ref=$2
   local -n scenario_steps_ref=$3
+  local scenario_number
   local step
   local scenario_failed=0
   local skip_remaining=0
 
+  ((TEST_SCENARIOS_INDEX += 1))
+  scenario_number=$TEST_SCENARIOS_INDEX
+  if [[ -n ${TARGET_SCENARIO_NUMBER:-} && $scenario_number -ne $TARGET_SCENARIO_NUMBER ]]; then
+    return 0
+  fi
+
+  TARGET_SCENARIO_MATCHED=1
   ((TEST_SCENARIOS_TOTAL += 1))
   FEATURE_PREVIOUS_STEP_TYPE=
   SCENARIO_DEFERRED_COMMANDS=()
-  output_scenario_start "$scenario_name"
+  output_scenario_start "$scenario_number" "$scenario_name"
 
   set +e
   for step in "${background_steps_ref[@]}"; do

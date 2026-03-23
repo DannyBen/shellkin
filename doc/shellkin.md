@@ -27,6 +27,7 @@ TARGET
 --------------------------------------------------
 
 Path to features directory or a single feature file
+
 Default: value of --default-target
 
 
@@ -50,8 +51,10 @@ Validate feature and step definition files
 --------------------------------------------------
 
 Path to features directory
+
 Relative to working directory
-This flag is normally only used in a .shellkin argfile
+
+Normally only used in a .shellkin argfile
 
 
 - Default Value: **features**
@@ -60,6 +63,7 @@ This flag is normally only used in a .shellkin argfile
 --------------------------------------------------
 
 Path to step definitions directory
+
 Relative to features root
 
 
@@ -69,8 +73,10 @@ Relative to features root
 --------------------------------------------------
 
 Path to support script for step definitions
+
 Relative to features root
-A file named 'support.sh' in the features root is auto-loaded without this flag
+
+support.sh is loaded automatically
 
 
 - *Repeatable*

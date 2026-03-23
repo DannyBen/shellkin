@@ -1,4 +1,7 @@
-target_input=${args['target']:-${args['--default-target']}}
+target_arg=${args['target']:-}
+default_target=${args['--default-target']}
+target_input=
+target_scenario=
 stepdefs_subdir=${args['--stepdefs']}
 fail_fast=${args['--fail-fast']:-0}
 validate_mode=${args['--validate']:-0}
@@ -14,7 +17,15 @@ if [[ -n $load_args ]]; then
   eval "load_paths=( $load_args )"
 fi
 
-if ! validate_test_target "$target_input" "$stepdefs_subdir"; then
+if ! parse_test_target "$target_arg" "$default_target"; then
+  printf 'validation error in TARGET:\n%s\n' "$VALIDATION_ERROR" >&2
+  return 1
+fi
+
+target_input=$TEST_TARGET_PATH
+target_scenario=$TEST_TARGET_SCENARIO
+
+if ! validate_test_target "$target_input" "$target_scenario" "$stepdefs_subdir"; then
   printf 'validation error in TARGET:\n%s\n' "$VALIDATION_ERROR" >&2
   return 1
 fi
@@ -55,6 +66,10 @@ support_files_source_all "$FEATURES_DIR" "${load_paths[@]}" || {
 stepdefs_files_find "$STEPDEFS_DIR"
 
 if ((validate_mode != 0)); then
+  TARGET_SCENARIO_NUMBER=$target_scenario
+  TARGET_SCENARIO_MATCHED=0
+  VALIDATION_SCENARIOS_INDEX=0
+
   for stepdef_file in "${STEPDEF_FILES[@]}"; do
     ((validation_total += 1))
     output_validate_file_start "stepdefs" "$(validation_stepdef_relpath "$stepdef_file")"
@@ -90,6 +105,11 @@ if ((validate_mode != 0)); then
     fi
   done
 
+  if [[ -n $target_scenario && $validation_status -eq 0 && $TARGET_SCENARIO_MATCHED -eq 0 ]]; then
+    printf 'validation error in TARGET:\nscenario number out of range: %s\n' "$target_scenario" >&2
+    return 1
+  fi
+
   output_validate_summary "$validation_total" "$validation_failed"
   return "$validation_status"
 else
@@ -97,6 +117,9 @@ else
     stepdefs_file_parse "$stepdef_file"
   done
 
+  TARGET_SCENARIO_NUMBER=$target_scenario
+  TARGET_SCENARIO_MATCHED=0
+  TEST_SCENARIOS_INDEX=0
   TEST_SCENARIOS_TOTAL=0
   TEST_SCENARIOS_FAILED=0
   TEST_FAIL_FAST="$fail_fast"
@@ -108,6 +131,11 @@ else
       break
     fi
   done
+
+  if [[ -n $target_scenario && $feature_status -eq 0 && $TARGET_SCENARIO_MATCHED -eq 0 ]]; then
+    printf 'validation error in TARGET:\nscenario number out of range: %s\n' "$target_scenario" >&2
+    return 1
+  fi
 
   output_summary "$TEST_SCENARIOS_TOTAL" "$TEST_SCENARIOS_FAILED"
   return "$feature_status"
