@@ -50,7 +50,7 @@ teardown() {
   stepdef_register 'run "$command"'
 
   ! step_run Then "the file 'somefile' should exist"
-  [ "$FAIL_MESSAGE" = "no matching step definition for: Then the file 'somefile' should exist" ]
+  [ "$FAIL_MESSAGE" = $'No matching step definition for:\nThen the file '\''somefile'\'' should exist' ]
 }
 
 @test "step_run returns the body status when the body fails" {

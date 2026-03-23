@@ -8,13 +8,19 @@ output_scenario_start() {
   printf "\n%s %s: %s\n" "$(bold Scenario)" "$(cyan_bold "$1")" "$2"
 }
 
-## Prints a formatted label inside a failure block.
-output_failure_label() {
-  printf '    %s' "$(bold "$1")"
+## Converts a feature file path to a display path relative to the target root.
+output_feature_relpath() {
+  local file=$1
+
+  if [[ -n ${FEATURES_DIR:-} && $file == "$FEATURES_DIR/"* ]]; then
+    printf '%s' "${file#"$FEATURES_DIR"/}"
+  else
+    basename "$file"
+  fi
 }
 
-## Prints one named failure detail value.
-output_failure_block() {
+## Prints one named error report value.
+output_error_report_field() {
   local label=$1
   local value=$2
   local line
@@ -22,17 +28,32 @@ output_failure_block() {
   [[ -n $value ]] || return 0
 
   if [[ $value != *$'\n'* ]]; then
-    output_failure_label "$label"
-    printf ': %s\n' "$value"
+    printf '  │ %s: %s\n' "$(bold "$label")" "$value"
     return 0
   fi
 
-  output_failure_label "$label"
-  printf ':\n\n'
+  printf '  │ %s:\n' "$(bold "$label")"
+  printf '  │\n'
   while IFS= read -r line || [[ -n $line ]]; do
-    printf '      %s\n' "$line"
+    printf '  │   %s\n' "$line"
   done <<<"$value"
+}
+
+## Prints a framed error report for a failed step.
+output_error_report() {
+  local step=$1
+
   printf '\n'
+  printf '  ┌─ Error Report ───────────────────────\n'
+  output_error_report_field "File" "$(output_feature_relpath "$FEATURE_FILE")"
+  output_error_report_field "Step" "$step"
+  printf '  │\n'
+  output_error_report_field "FAIL_MESSAGE" "${FAIL_MESSAGE:-}"
+  output_error_report_field "LAST_EXIT_CODE" "${LAST_EXIT_CODE:-}"
+  output_error_report_field "LAST_STDOUT" "${LAST_STDOUT:-}"
+  output_error_report_field "LAST_STDERR" "${LAST_STDERR:-}"
+  output_error_report_field "DOC_STRING" "${DOC_STRING:-}"
+  printf '  └──────────────────────────────────────\n\n'
 }
 
 ## Prints the result line for a step execution.
@@ -47,11 +68,7 @@ output_step_result() {
     symbol='✗'
     line="  $symbol $type $text"
     red "$line"
-    output_failure_block "FAIL_MESSAGE" "${FAIL_MESSAGE:-}"
-    output_failure_block "LAST_EXIT_CODE" "${LAST_EXIT_CODE:-}"
-    output_failure_block "LAST_STDOUT" "${LAST_STDOUT:-}"
-    output_failure_block "LAST_STDERR" "${LAST_STDERR:-}"
-    output_failure_block "DOC_STRING" "${DOC_STRING:-}"
+    output_error_report "$type $text"
     return 0
   fi
 
@@ -69,7 +86,7 @@ output_step_skipped() {
 ## Prints the deferred cleanup failure section.
 output_deferred_failure() {
   red "  ✗ Deferred cleanup"
-  output_failure_block "FAIL_MESSAGE" "${FAIL_MESSAGE:-}"
+  output_error_report "Deferred cleanup"
 }
 
 ## Prints the final summary for a test run.

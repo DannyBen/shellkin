@@ -15,6 +15,7 @@ feature_run() {
   local -a scenario_steps=()
 
   FEATURE_NAME=
+  FEATURE_FILE=$feature_file
 
   set +e
 

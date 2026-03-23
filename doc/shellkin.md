@@ -26,7 +26,13 @@ ARGUMENTS
 TARGET
 --------------------------------------------------
 
-Path to features directory or a single feature file
+Target to test. Can be in one of these forms:
+
+- DIR = Features directory
+- FILE = *.feature file
+- NUMBER = Scenario number in the default target
+- DIR:NUMBER = Scenario number in DIR
+- FILE:NUMBER = Scenario number in FILE
 
 Default: value of --default-target
 
