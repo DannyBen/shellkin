@@ -261,41 +261,6 @@ normalize_input() {
   done
 }
 
-# :command.argfile_helpers
-load_command_argfile() {
-  local argfile_path line arg
-  argfile_path="$1"
-  shift
-  argfile_input=()
-
-  if [[ ! -f "$argfile_path" ]]; then
-    argfile_input=("$@")
-    return
-  fi
-
-  while IFS= read -r line || [[ -n "$line" ]]; do
-    line="${line#"${line%%[![:space:]]*}"}"
-    line="${line%"${line##*[![:space:]]}"}"
-
-    [[ -z "$line" || "${line:0:1}" == "#" ]] && continue
-
-    if [[ "$line" =~ ^(-{1,2}[^[:space:]]+)[[:space:]]+(.+)$ ]]; then
-      for arg in "${BASH_REMATCH[1]}" "${BASH_REMATCH[2]}"; do
-        arg="${arg#"${arg%%[![:space:]]*}"}"
-        arg="${arg%"${arg##*[![:space:]]}"}"
-        [[ "$arg" =~ ^\"(.*)\"$ || "$arg" =~ ^\'(.*)\'$ ]] && arg="${BASH_REMATCH[1]}"
-        argfile_input+=("$arg")
-      done
-    else
-      arg="$line"
-      [[ "$arg" =~ ^\"(.*)\"$ || "$arg" =~ ^\'(.*)\'$ ]] && arg="${BASH_REMATCH[1]}"
-      argfile_input+=("$arg")
-    fi
-  done <"$argfile_path"
-
-  argfile_input+=("$@")
-}
-
 # :command.inspect_args
 inspect_args() {
   local k
@@ -1519,10 +1484,6 @@ validate_test_target__scenario_number_validate() {
 parse_requirements() {
   local key
 
-  # :command.argfile_filter
-  load_command_argfile ".shellkin" "$@"
-  set -- "${argfile_input[@]}"
-
   # :command.fixed_flags_filter
   while [[ $# -gt 0 ]]; do
     key="$1"
@@ -1544,6 +1505,72 @@ parse_requirements() {
 
     esac
   done
+
+  # :command.argfile_filter
+  local argfile argfile_line argfile_key argfile_value env_argfile env_argfile_var
+  argfile=".shellkin"
+  env_argfile_var="ARGFILE"
+  env_argfile="${!env_argfile_var:-}"
+
+  case "${env_argfile,,}" in
+    0 | off | no | false)
+      argfile=''
+      ;;
+  esac
+
+  [[ -n "$env_argfile" ]] && argfile="$env_argfile"
+  if [[ -f "$argfile" ]]; then
+    while IFS= read -r argfile_line || [[ -n "$argfile_line" ]]; do
+      [[ "$argfile_line" =~ ^[[:space:]]*(-{1,2}[^[:space:]]+)([[:space:]]+(.+))?[[:space:]]*$ ]] || continue
+      argfile_key="${BASH_REMATCH[1]}"
+      argfile_value="${BASH_REMATCH[3]:-}"
+      argfile_value="${argfile_value#"${argfile_value%%[![:space:]]*}"}"
+      argfile_value="${argfile_value%"${argfile_value##*[![:space:]]}"}"
+      [[ "$argfile_value" =~ ^\"(.*)\"$ || "$argfile_value" =~ ^\'(.*)\'$ ]] && argfile_value="${BASH_REMATCH[1]}"
+
+      case "$argfile_key" in
+        # :flag.argfile_case
+        --fail-fast | -f)
+          # :flag.argfile_case_no_arg
+          [[ -n ${args['--fail-fast']+x} ]] || args['--fail-fast']=1
+
+          ;;
+        # :flag.argfile_case
+        --validate | -v)
+          # :flag.argfile_case_no_arg
+          [[ -n ${args['--validate']+x} ]] || args['--validate']=1
+
+          ;;
+        # :flag.argfile_case
+        --default-target | -t)
+          # :flag.argfile_case_arg
+          if [[ -n "$argfile_value" ]]; then
+            [[ -n ${args['--default-target']+x} ]] || args['--default-target']="$argfile_value"
+          fi
+          ;;
+        # :flag.argfile_case
+        --stepdefs | -s)
+          # :flag.argfile_case_arg
+          if [[ -n "$argfile_value" ]]; then
+            [[ -n ${args['--stepdefs']+x} ]] || args['--stepdefs']="$argfile_value"
+          fi
+          ;;
+        # :flag.argfile_case
+        --load | -l)
+          # :flag.argfile_case_arg
+          if [[ -n "$argfile_value" ]]; then
+            escaped="$(printf '%q' "$argfile_value")"
+            if [[ -z ${args['--load']+x} ]]; then
+              args['--load']="$escaped"
+            else
+              args['--load']="${args['--load']} $escaped"
+            fi
+          fi
+          ;;
+
+      esac
+    done <"$argfile"
+  fi
 
   # :command.command_filter
   action="root"

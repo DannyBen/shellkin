@@ -131,10 +131,10 @@ step-definitions directory, and support files:
 
 The argfile format is intentionally simple:
 
-- Empty lines are ignored
-- Lines starting with `#` are ignored
-- Each other line becomes one argument
-- A flag and value can be written on one line or on two lines
+- Only lines that start with `-` or `--` are considered
+- Non-flag lines are ignored
+- Unknown flags are ignored
+- A flag value must appear on the same line as the flag
 - Matching outer quotes are stripped
 
 ## AI Agent Skill
