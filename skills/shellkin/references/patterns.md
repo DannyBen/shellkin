@@ -43,34 +43,34 @@ Scenario: Show multiline output
 
 ```bash
 @Then the output should match
-[[ "$LAST_STDOUT" == "$DOC_STRING" ]]
+  [[ "$LAST_STDOUT" == "$DOC_STRING" ]]
 ```
 
 ## Reusable Command And Exit Steps
 
 ```bash
 @When I run '{command}'
-run "$command"
+  run "$command"
 
 @Then the exit code should be '{code}'
-[[ "$LAST_EXIT_CODE" -eq "$code" ]]
+  [[ "$LAST_EXIT_CODE" -eq "$code" ]]
 
 @Then the output should include '{text}'
-[[ "$LAST_STDOUT" == *"$text"* ]]
+  [[ "$LAST_STDOUT" == *"$text"* ]]
 
 @Then the error output should include '{text}'
-[[ "$LAST_STDERR" == *"$text"* ]]
+  [[ "$LAST_STDERR" == *"$text"* ]]
 ```
 
 ## Temp Directory Setup
 
 ```bash
 @Given I am in a temp directory
-old_pwd=$PWD
-temp_dir=$(mktemp -d)
-cd "$temp_dir"
-defer cd "$old_pwd"
-defer rm -rf "$temp_dir"
+  old_pwd=$PWD
+  temp_dir=$(mktemp -d)
+  cd "$temp_dir"
+  defer cd "$old_pwd"
+  defer rm -rf "$temp_dir"
 ```
 
 Prefer `defer` over open-coded cleanup at the end of a step body.
@@ -79,10 +79,10 @@ Prefer `defer` over open-coded cleanup at the end of a step body.
 
 ```bash
 @Then the file '{path}' should exist
-[[ -f "$path" ]]
+  [[ -f "$path" ]]
 
 @Then the directory '{path}' should exist
-[[ -d "$path" ]]
+  [[ -d "$path" ]]
 ```
 
 Use generic path-oriented steps when possible so they can be reused in many features.

@@ -84,13 +84,14 @@ Step definitions live in shell files under `step_definitions/` and use headers l
 
 ```bash
 @When I run '{command}'
-run "$command"
+  run "$command"
 ```
 
 Follow these rules:
 
 - Headers must begin with `@Given`, `@When`, or `@Then`.
 - The body continues until the next header or end of file.
+- Indent step bodies by two spaces for readability.
 - Use named `{tokens}` for variable parts.
 - Token names must start with a letter or underscore, then use letters, numbers, or underscores.
 - When a step matches, token values are exposed as shell variables in the body.
