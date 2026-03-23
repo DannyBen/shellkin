@@ -5,8 +5,7 @@ output_feature_start() {
 
 ## Prints the heading for a scenario run.
 output_scenario_start() {
-  printf "\n%s: %s\n" "$(bold Scenario)" "$1"
-  # bold "\nScenario: $1"
+  printf "\n%s %s: %s\n" "$(bold Scenario)" "$(cyan_bold "$1")" "$2"
 }
 
 ## Prints a formatted label inside a failure block.

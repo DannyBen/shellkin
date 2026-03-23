@@ -39,7 +39,7 @@ EOF
 
   [ "$status" -eq 0 ]
   assert_output_contains "Feature: Create a file"
-  assert_output_contains "Scenario: Touch a file"
+  assert_output_contains "Scenario 1: Touch a file"
   assert_output_contains "1 scenario, 0 failing"
 }
 
@@ -135,8 +135,8 @@ EOF
   [ "$status" -eq 1 ]
   [ ! -e "$TEST_ROOT/chaos" ]
   [ ! -e "$TEST_ROOT/second-scenario" ]
-  assert_output_contains "Scenario: First"
-  [[ "$output" != *"Scenario: Second"* ]]
+  assert_output_contains "Scenario 1: First"
+  [[ "$output" != *"Scenario 2: Second"* ]]
   assert_output_contains "1 scenario, 0 passing, 1 failing"
 }
 
@@ -291,4 +291,74 @@ EOF
 
   [ "$status" -eq 1 ]
   assert_output_contains "load file not found: missing.sh"
+}
+
+@test "shellkin runs only the selected scenario number from the default target" {
+  write_file features/sample.feature <<'EOF'
+Feature: Select by scenario number
+
+Scenario: First
+  Then I write 'first'
+
+Scenario: Second
+  Then I write 'second'
+EOF
+
+  write_file features/step_definitions/core.sh <<'EOF'
+@Then I write '{text}'
+printf '%s' "$text" > "$TEST_ROOT/result.txt"
+EOF
+
+  run "$SHELLKIN_REPO_ROOT/shellkin" --default-target "$TEST_ROOT/features" 2
+
+  [ "$status" -eq 0 ]
+  [ "$(cat "$TEST_ROOT/result.txt")" = "second" ]
+  assert_output_contains "Scenario 2: Second"
+  [[ "$output" != *"Scenario 1: First"* ]]
+  assert_output_contains "1 scenario, 0 failing"
+}
+
+@test "shellkin runs only the selected scenario number from an explicit feature target" {
+  write_file features/sample.feature <<'EOF'
+Feature: Select from file target
+
+Scenario: First
+  Then I write 'first'
+
+Scenario: Second
+  Then I write 'second'
+EOF
+
+  write_file features/step_definitions/core.sh <<'EOF'
+@Then I write '{text}'
+printf '%s' "$text" > "$TEST_ROOT/result.txt"
+EOF
+
+  run "$SHELLKIN_REPO_ROOT/shellkin" "$TEST_ROOT/features/sample.feature:2"
+
+  [ "$status" -eq 0 ]
+  [ "$(cat "$TEST_ROOT/result.txt")" = "second" ]
+  assert_output_contains "Scenario 2: Second"
+  [[ "$output" != *"Scenario 1: First"* ]]
+  assert_output_contains "1 scenario, 0 failing"
+}
+
+@test "shellkin fails when the selected scenario number is out of range" {
+  write_file features/sample.feature <<'EOF'
+Feature: Missing scenario number
+
+Scenario: Only
+  Then I pass
+EOF
+
+  write_file features/step_definitions/core.sh <<'EOF'
+@Then I pass
+true
+EOF
+
+  run "$SHELLKIN_REPO_ROOT/shellkin" --default-target "$TEST_ROOT/features" 9
+
+  [ "$status" -eq 1 ]
+  assert_output_contains "validation error in TARGET:"
+  assert_output_contains "scenario number out of range: 9"
 }

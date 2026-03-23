@@ -148,7 +148,7 @@ EOF
   [ "$LAST_EXIT_CODE" -eq 0 ]
   output=$(<"$TEST_ROOT/output.txt")
   assert_output_contains "Feature: Create a file"
-  assert_output_contains "Scenario: Touch a file"
+  assert_output_contains "Scenario 1: Touch a file"
 }
 
 @test "feature_run executes background steps before each scenario" {
