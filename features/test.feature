@@ -81,3 +81,13 @@ Scenario: Printing doc string context for a failing step
   And the output should include 'goodbye'
   And the output should include '1 scenario, 0 passing, 1 failing'
   And the exit code should mean failure
+
+Scenario: Matching quoted tokens with interchangeable quote delimiters
+  When I run 'shellkin features/fixtures/smart_quotes/success.feature'
+  Then the output should include '6 scenarios, 0 failing'
+  And the exit code should mean success
+
+Scenario: Rejecting unquoted values for quoted token patterns
+  When I run 'shellkin features/fixtures/smart_quotes/unquoted.feature'
+  Then the output should include 'No matching step definition'
+  And the exit code should mean failure

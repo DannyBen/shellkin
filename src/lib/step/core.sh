@@ -26,6 +26,7 @@ step_run() {
   local step_type
   local body
   local -a tokens=()
+  local -a capture_indexes=()
 
   FAIL_MESSAGE=
   export FAIL_MESSAGE
@@ -37,16 +38,18 @@ step_run() {
     if [[ $text =~ ${STEPDEF_REGEXES[$i]} ]]; then
       if [[ -n ${STEPDEF_TOKENS_LIST[$i]} ]]; then
         read -r -a tokens <<<"${STEPDEF_TOKENS_LIST[$i]}"
+        read -r -a capture_indexes <<<"${STEPDEF_CAPTURE_INDEXES_LIST[$i]}"
       else
         tokens=()
+        capture_indexes=()
       fi
 
-      if ((${#tokens[@]} != ${#BASH_REMATCH[@]} - 1)); then
+      if ((${#tokens[@]} != ${#capture_indexes[@]})); then
         return 1
       fi
 
       for j in "${!tokens[@]}"; do
-        printf -v "${tokens[$j]}" '%s' "${BASH_REMATCH[$((j + 1))]}"
+        printf -v "${tokens[$j]}" '%s' "${BASH_REMATCH[${capture_indexes[$j]}]}"
         export "${tokens[$j]}"
       done
 

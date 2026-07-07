@@ -14,11 +14,13 @@ stepdefs_file_parse() {
   local next_pattern=
   local next_regex=
   local next_tokens=
+  local next_capture_indexes=
   local parsed_new_header=0
   local current_type=
   local current_pattern=
   local current_regex=
   local current_tokens=
+  local current_capture_indexes=
   local current_body=
 
   while IFS= read -r line || [[ -n $line ]]; do
@@ -32,6 +34,7 @@ stepdefs_file_parse() {
         next_pattern=$STEPDEF_PATTERN
         next_regex=$STEPDEF_REGEX
         next_tokens=$STEPDEF_TOKENS
+        next_capture_indexes=$STEPDEF_CAPTURE_INDEXES
       elif [[ -z $current_type ]]; then
         return 1
       fi
@@ -43,6 +46,7 @@ stepdefs_file_parse() {
         STEPDEF_PATTERN=$current_pattern
         STEPDEF_REGEX=$current_regex
         STEPDEF_TOKENS=$current_tokens
+        STEPDEF_CAPTURE_INDEXES=$current_capture_indexes
         stepdef_register "$current_body"
       fi
 
@@ -50,6 +54,7 @@ stepdefs_file_parse() {
       current_pattern=$next_pattern
       current_regex=$next_regex
       current_tokens=$next_tokens
+      current_capture_indexes=$next_capture_indexes
       current_body=
       continue
     fi
@@ -69,6 +74,7 @@ stepdefs_file_parse() {
     STEPDEF_PATTERN=$current_pattern
     STEPDEF_REGEX=$current_regex
     STEPDEF_TOKENS=$current_tokens
+    STEPDEF_CAPTURE_INDEXES=$current_capture_indexes
     stepdef_register "$current_body"
   fi
 }

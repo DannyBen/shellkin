@@ -56,6 +56,24 @@ use in the body.
 .PP
 Token names must start with a letter or underscore, and may contain
 letters, numbers, and underscores.
+.PP
+Quoted tokens accept either quote delimiter when the step runs.
+For example, this definition:
+.IP
+.EX
+\(atThen the text should include \(aq{text}\(aq
+.EE
+.PP
+matches both of these steps, and captures the text without the outer
+quotes:
+.IP
+.EX
+Then the text should include \(dqSomething\(aqs wrong\(dq
+Then the text should include \(aqJim \(dqJimbo\(dq Jackson\(aq
+.EE
+.PP
+The opening and closing quote in the feature step must match.
+Quoted token patterns do not match unquoted values.
 .SH HELPERS
 .SS run
 Run a shell command and capture its result for later assertions.

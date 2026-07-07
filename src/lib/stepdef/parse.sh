@@ -18,6 +18,7 @@ stepdef_register() {
   STEPDEF_PATTERNS+=("$STEPDEF_PATTERN")
   STEPDEF_REGEXES+=("$STEPDEF_REGEX")
   STEPDEF_TOKENS_LIST+=("$STEPDEF_TOKENS")
+  STEPDEF_CAPTURE_INDEXES_LIST+=("$STEPDEF_CAPTURE_INDEXES")
   STEPDEF_BODIES+=("$body")
 }
 
@@ -30,6 +31,7 @@ stepdef_parse() {
   STEPDEF_PATTERN=
   STEPDEF_REGEX=
   STEPDEF_TOKENS=
+  STEPDEF_CAPTURE_INDEXES=
 
   if [[ ! $line =~ ^@([A-Za-z]+)[[:space:]]+(.+)$ ]]; then
     return 1
@@ -45,6 +47,7 @@ stepdef_parse() {
   STEPDEF_PATTERN=$pattern
   STEPDEF_REGEX=$(pattern_regex "$pattern")
   STEPDEF_TOKENS=$(pattern_tokens "$pattern")
+  STEPDEF_CAPTURE_INDEXES=$(pattern_capture_indexes "$pattern")
 
   return 0
 }

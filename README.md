@@ -220,6 +220,23 @@ token becomes an exported shell variable available to the body:
 Token names must start with a letter or underscore, and may contain letters,
 numbers, and underscores.
 
+Quoted tokens accept either quote delimiter when the step runs. For example,
+this definition:
+
+```bash
+@Then the text should include '{text}'
+```
+
+matches both of these steps, and captures the text without the outer quotes:
+
+```gherkin
+Then the text should include "Something's wrong"
+Then the text should include 'Jim "Jimbo" Jackson'
+```
+
+The opening and closing quote in the feature step must match. Quoted token
+patterns do not match unquoted values.
+
 Each definition continues until the next step header or the end of the file.
 
 ## Step Helpers
