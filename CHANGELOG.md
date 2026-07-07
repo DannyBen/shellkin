@@ -1,6 +1,20 @@
 Changelog
 ========================================
 
+v0.1.3 - 2026-07-07
+----------------------------------------
+
+- Refactor to a single command [`8a3b9fd`](https://github.com/DannyBen/shellkin/commit/8a3b9fd)
+- Auto load `features/support.sh` [`3a96d4c`](https://github.com/DannyBen/shellkin/commit/3a96d4c)
+- Improve tests to ignore ANSI codes [`c50a71d`](https://github.com/DannyBen/shellkin/commit/c50a71d)
+- Allow testing a single scenario by number [`d580ab3`](https://github.com/DannyBen/shellkin/commit/d580ab3)
+- Improve error report format [`bc3418e`](https://github.com/DannyBen/shellkin/commit/bc3418e)
+- Fix stale docs [`2d0074c`](https://github.com/DannyBen/shellkin/commit/2d0074c)
+- Add smart quotes [`3803475`](https://github.com/DannyBen/shellkin/commit/3803475)
+- Add `--init` [`449de61`](https://github.com/DannyBen/shellkin/commit/449de61)
+- Compare [`v0.1.2..v0.1.3`](https://github.com/DannyBen/shellkin/compare/v0.1.2..v0.1.3)
+
+
 v0.1.2 - 2026-03-21
 ----------------------------------------
 
