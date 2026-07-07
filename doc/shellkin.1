@@ -27,8 +27,16 @@ Default: value of \-\-default\-target
 .SH OPTIONS
 .SS \-\-fail\-fast, \-f
 Abort after the first failing scenario
+.IP \(bu 2
+Conflicts With: \f[B]\-\-init\f[R]
 .SS \-\-validate, \-v
 Validate feature and step definition files
+.IP \(bu 2
+Conflicts With: \f[B]\-\-init\f[R]
+.SS \-\-init
+Initialize a Shellkin features directory
+.IP \(bu 2
+Conflicts With: \f[B]\-\-validate, \-\-fail\-fast, \-\-load\f[R]
 .SS \-\-default\-target, \-t DIR
 Path to features directory
 .PP
@@ -51,6 +59,8 @@ Relative to features root
 support.sh is loaded automatically
 .IP \(bu 2
 \f[I]Repeatable\f[R]
+.IP \(bu 2
+Conflicts With: \f[B]\-\-init\f[R]
 .SH SEE ALSO
 \f[B]shellkin\-stepdefs\f[R](5), \f[B]shellkin\-feature\f[R](5)
 .SH SOURCE CODE

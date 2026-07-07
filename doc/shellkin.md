@@ -46,12 +46,21 @@ OPTIONS
 
 Abort after the first failing scenario
 
+- Conflicts With: **--init**
 
 --validate, -v
 --------------------------------------------------
 
 Validate feature and step definition files
 
+- Conflicts With: **--init**
+
+--init
+--------------------------------------------------
+
+Initialize a Shellkin features directory
+
+- Conflicts With: **--validate, --fail-fast, --load**
 
 --default-target, -t DIR
 --------------------------------------------------
@@ -86,6 +95,7 @@ support.sh is loaded automatically
 
 
 - *Repeatable*
+- Conflicts With: **--init**
 
 SEE ALSO
 ==================================================
