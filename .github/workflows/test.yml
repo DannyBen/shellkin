@@ -16,8 +16,10 @@ jobs:
       run: shellcheck shellkin setup uninstall
     - name: Run Bats tests
       run: bats --recursive --print-output-on-failure test
+    - name: Add shellkin to PATH
+      run: echo "$GITHUB_WORKSPACE" >> "$GITHUB_PATH"
     - name: Run Shellkin tests
-      run: ./shellkin
+      run: shellkin
 
   ubuntu_setup:
     name: Setup on Ubuntu

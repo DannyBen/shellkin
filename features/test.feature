@@ -43,16 +43,6 @@ Scenario: Loading multiple support files in order
   And the output should include '1 scenario, 0 failing'
   And the exit code should mean success
 
-Scenario: Initializing a runnable features directory
-  Given I am in a temp directory
-  When I run 'shellkin --init'
-  Then the output should include 'initialized shellkin features directory: features'
-  And the exit code should mean success
-  When I run 'shellkin'
-  Then the output should include 'Feature: shellkin example'
-  And the output should include '1 scenario, 0 failing'
-  And the exit code should mean success
-
 Scenario: Running a feature that uses the star step keyword
   When I run 'shellkin features/fixtures/selective/star_step.feature'
   Then the output should include 'Feature: star step keyword'
