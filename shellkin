@@ -19,6 +19,7 @@ root_command() {
   stepdefs_subdir=${args['--stepdefs']}
   fail_fast=${args['--fail-fast']:-0}
   validate_mode=${args['--validate']:-0}
+  init_mode=${args['--init']:-0}
   load_args=${args['--load']:-}
   load_paths=()
   feature_status=0
@@ -29,6 +30,17 @@ root_command() {
 
   if [[ -n $load_args ]]; then
     eval "load_paths=( $load_args )"
+  fi
+
+  if ((init_mode != 0)); then
+    init_target=${target_arg:-$default_target}
+
+    if init_files_create "$init_target" "$stepdefs_subdir"; then
+      return 0
+    fi
+
+    printf 'init error:\n%s\n' "$INIT_ERROR" >&2
+    return 1
   fi
 
   if ! parse_test_target "$target_arg" "$default_target"; then
@@ -187,11 +199,19 @@ shellkin_usage() {
     # :flag.usage
     printf "  %s\n" "$(green "--fail-fast, -f")"
     printf "    Abort after the first failing scenario\n"
+    printf "    %s\n" "Conflicts: --init"
     echo
 
     # :flag.usage
     printf "  %s\n" "$(green "--validate, -v")"
     printf "    Validate feature and step definition files\n"
+    printf "    %s\n" "Conflicts: --init"
+    echo
+
+    # :flag.usage
+    printf "  %s\n" "$(green "--init")"
+    printf "    Initialize a Shellkin features directory\n"
+    printf "    %s\n" "Conflicts: --validate, --fail-fast, --load"
     echo
 
     # :flag.usage
@@ -209,6 +229,7 @@ shellkin_usage() {
     # :flag.usage
     printf "  %s\n" "$(green "--load, -l SUPPORT_SCRIPT (repeatable)")"
     printf "    Path to support script for step definitions  \n    Relative to features root  \n    support.sh is loaded automatically\n"
+    printf "    %s\n" "Conflicts: --init"
     echo
 
     # :command.usage_fixed_flags
@@ -888,6 +909,136 @@ feature_step_type_resolve() {
       printf '%s' "$current_type"
       ;;
   esac
+}
+
+# src/lib/init/files.sh
+init_files_create() {
+  local target_dir=$1
+  local stepdefs_subdir=$2
+  local stepdefs_dir="$target_dir/$stepdefs_subdir"
+  local feature_file="$target_dir/example.feature"
+  local support_file="$target_dir/support.sh"
+  local stepdefs_file="$stepdefs_dir/core.sh"
+  local readme_file="$target_dir/README.md"
+
+  INIT_ERROR=
+
+  init__target_validate "$target_dir" "$stepdefs_dir" || return 1
+  init__file_available "$feature_file" || return 1
+  init__file_available "$support_file" || return 1
+  init__file_available "$stepdefs_file" || return 1
+  init__file_available "$readme_file" || return 1
+
+  mkdir -p "$stepdefs_dir"
+
+  init__example_feature_write "$feature_file"
+  init__support_file_write "$support_file"
+  init__stepdefs_file_write "$stepdefs_file"
+  init__readme_file_write "$readme_file" "$target_dir" "$stepdefs_subdir"
+
+  printf 'initialized shellkin features directory: %s\n' "$target_dir"
+}
+
+init__target_validate() {
+  local target_dir=$1
+  local stepdefs_dir=$2
+
+  if [[ -z $target_dir ]]; then
+    INIT_ERROR="init target is required"
+    return 1
+  fi
+
+  if [[ $target_dir == *:* ]]; then
+    INIT_ERROR="init target must be a directory, not a scenario selector: $target_dir"
+    return 1
+  fi
+
+  if [[ $target_dir == *.feature ]]; then
+    INIT_ERROR="init target must be a directory, not a feature file: $target_dir"
+    return 1
+  fi
+
+  if [[ -e $target_dir && ! -d $target_dir ]]; then
+    INIT_ERROR="init target exists and is not a directory: $target_dir"
+    return 1
+  fi
+
+  if [[ -e $stepdefs_dir && ! -d $stepdefs_dir ]]; then
+    INIT_ERROR="step definitions path exists and is not a directory: $stepdefs_dir"
+    return 1
+  fi
+}
+
+init__file_available() {
+  local path=$1
+
+  if [[ -e $path ]]; then
+    INIT_ERROR="refusing to overwrite existing file: $path"
+    return 1
+  fi
+}
+
+init__example_feature_write() {
+  local path=$1
+
+  cat >"$path" <<'EOF'
+Feature: shellkin example
+  A small generated example
+
+Scenario: Run a command
+  When I run 'printf hello'
+  Then the output should include 'hello'
+EOF
+}
+
+init__support_file_write() {
+  local path=$1
+
+  cat >"$path" <<'EOF'
+# Helper functions for Shellkin step definitions.
+EOF
+}
+
+init__stepdefs_file_write() {
+  local path=$1
+
+  cat >"$path" <<'EOF'
+@When I run '{command}'
+  run "$command"
+
+@Then the output should include '{text}'
+  [[ "$LAST_STDOUT" == *"$text"* ]] || fail "expected output to include '$text'"
+EOF
+}
+
+init__readme_file_write() {
+  local path=$1
+  local target_dir=$2
+  local stepdefs_subdir=$3
+  local run_command=shellkin
+  local target_arg
+  local stepdefs_arg
+
+  if [[ $target_dir != features || $stepdefs_subdir != step_definitions ]]; then
+    printf -v target_arg '%q' "$target_dir"
+    printf -v stepdefs_arg '%q' "$stepdefs_subdir"
+    run_command="shellkin --default-target $target_arg --stepdefs $stepdefs_arg"
+  fi
+
+  cat >"$path" <<EOF
+# Shellkin Features
+
+- Feature files live in this directory.
+- Step definitions live in \`$stepdefs_subdir/\`.
+- \`support.sh\` is loaded automatically when present.
+- Extra support files can be loaded with repeatable \`--load\` entries.
+
+Run these tests with:
+
+\`\`\`bash
+$run_command
+\`\`\`
+EOF
 }
 
 # src/lib/output/test.sh
@@ -1612,6 +1763,12 @@ parse_requirements() {
 
           ;;
         # :flag.argfile_case
+        --init)
+          # :flag.argfile_case_no_arg
+          [[ -n ${args['--init']+x} ]] || args['--init']=1
+
+          ;;
+        # :flag.argfile_case
         --default-target | -t)
           # :flag.argfile_case_arg
           if [[ -n "$argfile_value" ]]; then
@@ -1651,6 +1808,11 @@ parse_requirements() {
     case "$key" in
       # :flag.case
       --fail-fast | -f)
+        # :flag.conflicts
+        if [[ -n "${args['--init']:-}" ]]; then
+          printf "conflicting options: %s cannot be used with %s\n" "$key" "--init" >&2
+          exit 1
+        fi
 
         # :flag.case_no_arg
         args['--fail-fast']=1
@@ -1659,9 +1821,29 @@ parse_requirements() {
 
       # :flag.case
       --validate | -v)
+        # :flag.conflicts
+        if [[ -n "${args['--init']:-}" ]]; then
+          printf "conflicting options: %s cannot be used with %s\n" "$key" "--init" >&2
+          exit 1
+        fi
 
         # :flag.case_no_arg
         args['--validate']=1
+        shift
+        ;;
+
+      # :flag.case
+      --init)
+        # :flag.conflicts
+        for conflict in --validate --fail-fast --load; do
+          if [[ -n "${args[$conflict]:-}" ]]; then
+            printf "conflicting options: %s cannot be used with %s\n" "$key" "$conflict" >&2
+            exit 1
+          fi
+        done
+
+        # :flag.case_no_arg
+        args['--init']=1
         shift
         ;;
 
@@ -1695,6 +1877,11 @@ parse_requirements() {
 
       # :flag.case
       --load | -l)
+        # :flag.conflicts
+        if [[ -n "${args['--init']:-}" ]]; then
+          printf "conflicting options: %s cannot be used with %s\n" "$key" "--init" >&2
+          exit 1
+        fi
 
         # :flag.case_arg
         if [[ -n ${2+x} ]]; then

@@ -23,9 +23,14 @@ flags:
 - long: --fail-fast
   short: -f
   help: Abort after the first failing scenario
+  conflicts: [--init]
 - long: --validate
   short: -v
   help: Validate feature and step definition files
+  conflicts: [--init]
+- long: --init
+  help: Initialize a Shellkin features directory
+  conflicts: [--validate, --fail-fast, --load]
 - long: --default-target
   short: -t
   help: |
@@ -49,6 +54,7 @@ flags:
     Relative to features root  
     support.sh is loaded automatically
   repeatable: true
+  conflicts: [--init]
 
 
 # Manpages Extras

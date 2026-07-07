@@ -92,6 +92,9 @@ Implemented pieces include:
 ## Usage
 
 ```bash
+# Create a starter features directory:
+shellkin --init
+
 # Run all repo features:
 shellkin
 
@@ -113,6 +116,11 @@ and are not executed.
 
 Use `shellkin --validate` to check feature structure and step-definition matching
 without running any step bodies.
+
+Use `shellkin --init` to create a starter features directory with an example
+feature, step definitions, `support.sh`, and a local README. Pass a target
+directory or configure `--default-target` to initialize a directory other than
+`features`; use `--stepdefs` to choose the step definition directory name.
 
 ## Configuration with `.shellkin`
 
@@ -179,6 +187,12 @@ features/
 - `support.sh` is loaded automatically when present.
 - Additional support files are loaded when passed with `--load`.
 - `--stepdefs` and `--load` paths are relative to the features directory.
+
+You can create this structure with:
+
+```bash
+shellkin --init
+```
 
 ## Step Definitions
 

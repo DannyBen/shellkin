@@ -5,6 +5,7 @@ target_scenario=
 stepdefs_subdir=${args['--stepdefs']}
 fail_fast=${args['--fail-fast']:-0}
 validate_mode=${args['--validate']:-0}
+init_mode=${args['--init']:-0}
 load_args=${args['--load']:-}
 load_paths=()
 feature_status=0
@@ -15,6 +16,17 @@ feature_files=()
 
 if [[ -n $load_args ]]; then
   eval "load_paths=( $load_args )"
+fi
+
+if ((init_mode != 0)); then
+  init_target=${target_arg:-$default_target}
+
+  if init_files_create "$init_target" "$stepdefs_subdir"; then
+    return 0
+  fi
+
+  printf 'init error:\n%s\n' "$INIT_ERROR" >&2
+  return 1
 fi
 
 if ! parse_test_target "$target_arg" "$default_target"; then

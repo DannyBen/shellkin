@@ -275,6 +275,80 @@ EOF
   assert_output_contains "1 scenario, 0 failing"
 }
 
+@test "shellkin --init creates a runnable default features directory" {
+  cd "$TEST_ROOT"
+
+  run "$SHELLKIN_REPO_ROOT/shellkin" --init
+
+  [ "$status" -eq 0 ]
+  assert_output_contains "initialized shellkin features directory: features"
+  [ -f "$TEST_ROOT/features/example.feature" ]
+  [ -f "$TEST_ROOT/features/support.sh" ]
+  [ -f "$TEST_ROOT/features/step_definitions/core.sh" ]
+  [ -f "$TEST_ROOT/features/README.md" ]
+
+  run "$SHELLKIN_REPO_ROOT/shellkin"
+
+  [ "$status" -eq 0 ]
+  assert_output_contains "Feature: shellkin example"
+  assert_output_contains "1 scenario, 0 failing"
+}
+
+@test "shellkin --init respects target and --stepdefs" {
+  cd "$TEST_ROOT"
+
+  run "$SHELLKIN_REPO_ROOT/shellkin" --init --stepdefs steps specs
+
+  [ "$status" -eq 0 ]
+  assert_output_contains "initialized shellkin features directory: specs"
+  [ -f "$TEST_ROOT/specs/example.feature" ]
+  [ -f "$TEST_ROOT/specs/steps/core.sh" ]
+
+  run "$SHELLKIN_REPO_ROOT/shellkin" --stepdefs steps specs
+
+  [ "$status" -eq 0 ]
+  assert_output_contains "1 scenario, 0 failing"
+}
+
+@test "shellkin --init uses --default-target when target is omitted" {
+  cd "$TEST_ROOT"
+
+  run "$SHELLKIN_REPO_ROOT/shellkin" --init --default-target specs
+
+  [ "$status" -eq 0 ]
+  assert_output_contains "initialized shellkin features directory: specs"
+  [ -f "$TEST_ROOT/specs/example.feature" ]
+  [ -f "$TEST_ROOT/specs/step_definitions/core.sh" ]
+
+  run "$SHELLKIN_REPO_ROOT/shellkin" --default-target specs
+
+  [ "$status" -eq 0 ]
+  assert_output_contains "1 scenario, 0 failing"
+}
+
+@test "shellkin --init refuses to overwrite existing files" {
+  write_file features/example.feature <<'EOF'
+Feature: existing
+EOF
+
+  cd "$TEST_ROOT"
+
+  run "$SHELLKIN_REPO_ROOT/shellkin" --init
+
+  [ "$status" -eq 1 ]
+  assert_output_contains "init error:"
+  assert_output_contains "refusing to overwrite existing file: features/example.feature"
+}
+
+@test "shellkin --init conflicts with runtime flags" {
+  cd "$TEST_ROOT"
+
+  run "$SHELLKIN_REPO_ROOT/shellkin" --init --validate
+
+  [ "$status" -eq 1 ]
+  assert_output_contains "conflicting options: --validate cannot be used with --init"
+}
+
 @test "shellkin --load fails when the file does not exist" {
   write_file features/sample.feature <<'EOF'
 Feature: Missing load file
