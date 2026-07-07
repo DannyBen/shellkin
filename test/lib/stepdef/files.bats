@@ -10,6 +10,7 @@ setup() {
   STEPDEF_PATTERNS=()
   STEPDEF_REGEXES=()
   STEPDEF_TOKENS_LIST=()
+  STEPDEF_CAPTURE_INDEXES_LIST=()
   STEPDEF_BODIES=()
 }
 
@@ -31,7 +32,9 @@ EOF
   [ "${#STEPDEF_TYPES[@]}" -eq 2 ]
   [ "${STEPDEF_TYPES[0]}" = "When" ]
   [ "${STEPDEF_TYPES[1]}" = "Then" ]
-  [ "${STEPDEF_REGEXES[0]}" = "I run '(.+)'" ]
+  [ "${STEPDEF_REGEXES[0]}" = "I run (['\"])(.+)\\1" ]
+  [ "${STEPDEF_CAPTURE_INDEXES_LIST[0]}" = "2" ]
+  [ "${STEPDEF_CAPTURE_INDEXES_LIST[1]}" = "2" ]
 }
 
 @test "stepdefs_file_parse preserves multi-line step bodies" {

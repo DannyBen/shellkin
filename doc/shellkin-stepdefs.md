@@ -13,9 +13,10 @@ DESCRIPTION
 Shellkin step definitions are shell code files loaded from the configured step
 definitions directory under the selected features root.
 
-If present, the support file is sourced before step definitions are loaded. By
-default this file is **support.sh** in the features directory. Use
-**SHELLKIN_SUPPORT_FILE** to change its name relative to that directory.
+If present, **support.sh** in the features directory is sourced before step
+definitions are loaded. Additional support scripts can be loaded with repeatable
+**--load** entries or through the **.shellkin** argfile. Support script paths are
+relative to the selected features root.
 
 Each step definition starts with a header line beginning with one of:
 
@@ -69,6 +70,23 @@ the body.
 
 Token names must start with a letter or underscore, and may contain letters,
 numbers, and underscores.
+
+Quoted tokens accept either quote delimiter when the step runs. For example,
+this definition:
+
+```bash
+@Then the text should include '{text}'
+```
+
+matches both of these steps, and captures the text without the outer quotes:
+
+```gherkin
+Then the text should include "Something's wrong"
+Then the text should include 'Jim "Jimbo" Jackson'
+```
+
+The opening and closing quote in the feature step must match. Quoted token
+patterns do not match unquoted values.
 
 HELPERS
 ==================================================

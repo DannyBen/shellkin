@@ -170,12 +170,14 @@ Shellkin expects this structure:
 features/
 ├── step_definitions/
 │   └── core.sh
+├── support.sh
 └── example.feature
 ```
 
 - Feature files live in the target directory.
 - Step definitions live in `step_definitions/` under that same directory.
-- Support files are loaded only when passed with `--load`.
+- `support.sh` is loaded automatically when present.
+- Additional support files are loaded when passed with `--load`.
 - `--stepdefs` and `--load` paths are relative to the features directory.
 
 ## Step Definitions
@@ -183,9 +185,9 @@ features/
 Step definitions are shell snippets declared in files under
 `step_definitions/`.
 
-To share helper functions across step definition files, place them in a support
-script under the features directory and load it with `--load` or through
-`.shellkin`.
+To share helper functions across step definition files, place them in
+`support.sh` under the features directory. For additional support scripts, use
+`--load` or configure them in `.shellkin`.
 
 ```bash
 @When I run '{command}'
@@ -217,6 +219,23 @@ token becomes an exported shell variable available to the body:
 
 Token names must start with a letter or underscore, and may contain letters,
 numbers, and underscores.
+
+Quoted tokens accept either quote delimiter when the step runs. For example,
+this definition:
+
+```bash
+@Then the text should include '{text}'
+```
+
+matches both of these steps, and captures the text without the outer quotes:
+
+```gherkin
+Then the text should include "Something's wrong"
+Then the text should include 'Jim "Jimbo" Jackson'
+```
+
+The opening and closing quote in the feature step must match. Quoted token
+patterns do not match unquoted values.
 
 Each definition continues until the next step header or the end of the file.
 

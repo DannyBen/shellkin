@@ -12,6 +12,7 @@ setup() {
   STEPDEF_PATTERNS=()
   STEPDEF_REGEXES=()
   STEPDEF_TOKENS_LIST=()
+  STEPDEF_CAPTURE_INDEXES_LIST=()
   STEPDEF_BODIES=()
 
   LAST_EXIT_CODE=
@@ -43,6 +44,15 @@ teardown() {
   step_run When "I copy left.txt to right.txt"
 
   [ "$STEP_RESULT" = "left.txt:right.txt" ]
+}
+
+@test "step_run binds quoted tokens with either quote delimiter" {
+  stepdef_parse "@Then the text should include '{text}'"
+  stepdef_register 'STEP_RESULT="$text"'
+
+  step_run Then 'the text should include "Something'\''s wrong"'
+
+  [ "$STEP_RESULT" = "Something's wrong" ]
 }
 
 @test "step_run returns non-zero when no step definition matches" {

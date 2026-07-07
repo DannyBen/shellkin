@@ -26,7 +26,7 @@ defer__run_all() {
   local index
   local deferred_command
 
-  for ((index=${#SCENARIO_DEFERRED_COMMANDS[@]} - 1; index >= 0; index--)); do
+  for ((index = ${#SCENARIO_DEFERRED_COMMANDS[@]} - 1; index >= 0; index--)); do
     deferred_command=${SCENARIO_DEFERRED_COMMANDS[$index]}
     if defer__run_command "$deferred_command"; then
       :

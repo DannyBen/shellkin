@@ -27,7 +27,8 @@ If external reference is useful, Shellkin source code and documentation are avai
 
 1. Inspect the target project before writing tests.
    Check for `features/`, existing `.feature` files, and `step_definitions/`.
-   If the repo uses custom roots, respect `SHELLKIN_FEATURES_ROOT` and `SHELLKIN_STEPDEFS_ROOT`.
+   If the repo uses custom roots, respect its `.shellkin` argfile and any
+   explicit `--default-target`, `--stepdefs`, or `--load` usage.
    Consult the relevant Shellkin man pages before relying on memory.
 2. Model tests around observable behavior.
    Prefer CLI behavior, file effects, stdout, stderr, and exit status over implementation details.
@@ -131,7 +132,8 @@ After edits:
 
 1. Run `shellkin --validate` on the feature root or changed feature file.
 2. Run `shellkin` on the narrowed target when practical.
-3. If a step does not match, check the step text, header text, token names, and the active features/stepdefs roots.
+3. If a step does not match, check the step text, header text, token names, the
+   active target, and the configured step definitions directory.
 
 ## References
 
