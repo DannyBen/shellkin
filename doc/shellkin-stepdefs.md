@@ -13,9 +13,10 @@ DESCRIPTION
 Shellkin step definitions are shell code files loaded from the configured step
 definitions directory under the selected features root.
 
-If present, the support file is sourced before step definitions are loaded. By
-default this file is **support.sh** in the features directory. Use
-**SHELLKIN_SUPPORT_FILE** to change its name relative to that directory.
+If present, **support.sh** in the features directory is sourced before step
+definitions are loaded. Additional support scripts can be loaded with repeatable
+**--load** entries or through the **.shellkin** argfile. Support script paths are
+relative to the selected features root.
 
 Each step definition starts with a header line beginning with one of:
 

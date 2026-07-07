@@ -170,12 +170,14 @@ Shellkin expects this structure:
 features/
 ├── step_definitions/
 │   └── core.sh
+├── support.sh
 └── example.feature
 ```
 
 - Feature files live in the target directory.
 - Step definitions live in `step_definitions/` under that same directory.
-- Support files are loaded only when passed with `--load`.
+- `support.sh` is loaded automatically when present.
+- Additional support files are loaded when passed with `--load`.
 - `--stepdefs` and `--load` paths are relative to the features directory.
 
 ## Step Definitions
@@ -183,9 +185,9 @@ features/
 Step definitions are shell snippets declared in files under
 `step_definitions/`.
 
-To share helper functions across step definition files, place them in a support
-script under the features directory and load it with `--load` or through
-`.shellkin`.
+To share helper functions across step definition files, place them in
+`support.sh` under the features directory. For additional support scripts, use
+`--load` or configure them in `.shellkin`.
 
 ```bash
 @When I run '{command}'
