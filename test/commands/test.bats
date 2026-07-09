@@ -393,6 +393,36 @@ EOF
   assert_output_contains "1 scenario, 0 failing"
 }
 
+@test "shellkin omits headings for feature files with no selected scenarios" {
+  write_file features/first.feature <<'EOF'
+Feature: First feature
+
+Scenario: First
+  Then I write 'first'
+EOF
+
+  write_file features/second.feature <<'EOF'
+Feature: Second feature
+
+Scenario: Second
+  Then I write 'second'
+EOF
+
+  write_file features/step_definitions/core.sh <<'EOF'
+@Then I write '{text}'
+printf '%s' "$text" > "$TEST_ROOT/result.txt"
+EOF
+
+  run "$SHELLKIN_REPO_ROOT/shellkin" --default-target "$TEST_ROOT/features" 2
+
+  [ "$status" -eq 0 ]
+  [ "$(cat "$TEST_ROOT/result.txt")" = "second" ]
+  [[ "$output" != *"Feature: First feature"* ]]
+  assert_output_contains "Feature: Second feature"
+  assert_output_contains "Scenario 2: Second"
+  assert_output_contains "1 scenario, 0 failing"
+}
+
 @test "shellkin runs only the selected scenario number from an explicit feature target" {
   write_file features/sample.feature <<'EOF'
 Feature: Select from file target

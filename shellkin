@@ -365,6 +365,7 @@ feature_run() {
   local section=
   local feature_seen=0
   local scenario_seen=0
+  local feature_output_started=0
   local in_description=0
   local in_doc_string=0
   local failed=0
@@ -412,7 +413,6 @@ feature_run() {
         section=feature
         in_description=1
         FEATURE_NAME=$FEATURE_LINE_NAME
-        output_feature_start "$FEATURE_NAME"
         continue
         ;;
       background)
@@ -768,6 +768,10 @@ feature_scenario_run() {
   ((TEST_SCENARIOS_TOTAL += 1))
   FEATURE_PREVIOUS_STEP_TYPE=
   SCENARIO_DEFERRED_COMMANDS=()
+  if [[ -n ${FEATURE_NAME:-} && ${feature_output_started:-1} -eq 0 ]]; then
+    output_feature_start "$FEATURE_NAME"
+    feature_output_started=1
+  fi
   output_scenario_start "$scenario_number" "$scenario_name"
 
   set +e
