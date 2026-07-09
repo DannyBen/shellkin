@@ -1,6 +1,16 @@
 Changelog
 ========================================
 
+v0.1.4 - 2026-07-09
+----------------------------------------
+
+- Remove empty captions when running specific scenarios [`a9a6e41`](https://github.com/DannyBen/shellkin/commit/a9a6e41)
+- Add support for `@tags` [`d13d608`](https://github.com/DannyBen/shellkin/commit/d13d608)
+- Add support for `@Before` and `@After` hooks [`62604bf`](https://github.com/DannyBen/shellkin/commit/62604bf)
+- Add support for `@BeforeAll` and `@AfterAll` hooks [`66908ed`](https://github.com/DannyBen/shellkin/commit/66908ed)
+- Compare [`v0.1.3..v0.1.4`](https://github.com/DannyBen/shellkin/compare/v0.1.3..v0.1.4)
+
+
 v0.1.3 - 2026-07-07
 ----------------------------------------
 
