@@ -70,12 +70,16 @@ STEPDEF_REGEXES=()
 STEPDEF_TOKENS_LIST=()
 STEPDEF_CAPTURE_INDEXES_LIST=()
 STEPDEF_BODIES=()
+SHELLKIN_BEFORE_ALL_HOOK_HEADERS=()
+SHELLKIN_BEFORE_ALL_HOOK_BODIES=()
 SHELLKIN_BEFORE_HOOK_TAGS=()
 SHELLKIN_BEFORE_HOOK_HEADERS=()
 SHELLKIN_BEFORE_HOOK_BODIES=()
 SHELLKIN_AFTER_HOOK_TAGS=()
 SHELLKIN_AFTER_HOOK_HEADERS=()
 SHELLKIN_AFTER_HOOK_BODIES=()
+SHELLKIN_AFTER_ALL_HOOK_HEADERS=()
+SHELLKIN_AFTER_ALL_HOOK_BODIES=()
 
 if [[ -f $TARGET_PATH ]]; then
   FEATURES_DIR="$(dirname "$TARGET_PATH")"
@@ -162,6 +166,7 @@ else
   TEST_INCLUDE_TAGS=("${include_tags[@]}")
   TEST_EXCLUDE_TAGS=("${exclude_tags[@]}")
   TEST_ABORT_RUN=0
+  ALL_HOOKS_ACTIVE=0
 
   for feature_file in "${feature_files[@]}"; do
     feature_run "$feature_file" || feature_status=1
@@ -169,6 +174,18 @@ else
       break
     fi
   done
+
+  if ((ALL_HOOKS_ACTIVE != 0)); then
+    if hooks__run_after_all; then
+      :
+    else
+      output_hook_failure "$HOOK_FAILED_HEADER"
+      feature_status=1
+      if ((TEST_SCENARIOS_FAILED == 0 && TEST_SCENARIOS_TOTAL > 0)); then
+        TEST_SCENARIOS_FAILED=1
+      fi
+    fi
+  fi
 
   if [[ -n $target_scenario && $feature_status -eq 0 && $TARGET_SCENARIO_MATCHED -eq 0 ]]; then
     printf 'validation error in TARGET:\nscenario number out of range: %s\n' "$target_scenario" >&2

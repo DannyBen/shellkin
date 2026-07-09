@@ -84,12 +84,16 @@ root_command() {
   STEPDEF_TOKENS_LIST=()
   STEPDEF_CAPTURE_INDEXES_LIST=()
   STEPDEF_BODIES=()
+  SHELLKIN_BEFORE_ALL_HOOK_HEADERS=()
+  SHELLKIN_BEFORE_ALL_HOOK_BODIES=()
   SHELLKIN_BEFORE_HOOK_TAGS=()
   SHELLKIN_BEFORE_HOOK_HEADERS=()
   SHELLKIN_BEFORE_HOOK_BODIES=()
   SHELLKIN_AFTER_HOOK_TAGS=()
   SHELLKIN_AFTER_HOOK_HEADERS=()
   SHELLKIN_AFTER_HOOK_BODIES=()
+  SHELLKIN_AFTER_ALL_HOOK_HEADERS=()
+  SHELLKIN_AFTER_ALL_HOOK_BODIES=()
 
   if [[ -f $TARGET_PATH ]]; then
     FEATURES_DIR="$(dirname "$TARGET_PATH")"
@@ -176,6 +180,7 @@ root_command() {
     TEST_INCLUDE_TAGS=("${include_tags[@]}")
     TEST_EXCLUDE_TAGS=("${exclude_tags[@]}")
     TEST_ABORT_RUN=0
+    ALL_HOOKS_ACTIVE=0
 
     for feature_file in "${feature_files[@]}"; do
       feature_run "$feature_file" || feature_status=1
@@ -183,6 +188,18 @@ root_command() {
         break
       fi
     done
+
+    if ((ALL_HOOKS_ACTIVE != 0)); then
+      if hooks__run_after_all; then
+        :
+      else
+        output_hook_failure "$HOOK_FAILED_HEADER"
+        feature_status=1
+        if ((TEST_SCENARIOS_FAILED == 0 && TEST_SCENARIOS_TOTAL > 0)); then
+          TEST_SCENARIOS_FAILED=1
+        fi
+      fi
+    fi
 
     if [[ -n $target_scenario && $feature_status -eq 0 && $TARGET_SCENARIO_MATCHED -eq 0 ]]; then
       printf 'validation error in TARGET:\nscenario number out of range: %s\n' "$target_scenario" >&2
@@ -475,7 +492,7 @@ feature_run() {
               :
             else
               failed=1
-              if ((TEST_FAIL_FAST != 0)); then
+              if ((TEST_FAIL_FAST != 0 || TEST_ABORT_RUN != 0)); then
                 TEST_ABORT_RUN=1
                 scenario_seen=0
                 break
@@ -509,7 +526,7 @@ feature_run() {
             :
           else
             failed=1
-            if ((TEST_FAIL_FAST != 0)); then
+            if ((TEST_FAIL_FAST != 0 || TEST_ABORT_RUN != 0)); then
               TEST_ABORT_RUN=1
               scenario_seen=0
               break
@@ -566,7 +583,7 @@ feature_run() {
       :
     else
       failed=1
-      if ((TEST_FAIL_FAST != 0)); then
+      if ((TEST_FAIL_FAST != 0 || TEST_ABORT_RUN != 0)); then
         TEST_ABORT_RUN=1
       fi
     fi
@@ -576,7 +593,7 @@ feature_run() {
       :
     else
       failed=1
-      if ((TEST_FAIL_FAST != 0)); then
+      if ((TEST_FAIL_FAST != 0 || TEST_ABORT_RUN != 0)); then
         TEST_ABORT_RUN=1
       fi
     fi
@@ -908,7 +925,20 @@ feature_scenario_run() {
   output_scenario_start "$scenario_number" "$scenario_name"
 
   set +e
-  if hooks__run_before_all; then
+  if ((${ALL_HOOKS_ACTIVE:-0} == 0)); then
+    if hooks__run_before_all; then
+      ALL_HOOKS_ACTIVE=1
+    else
+      scenario_failed=1
+      TEST_ABORT_RUN=1
+      output_hook_failure "$HOOK_FAILED_HEADER"
+      set -e
+      ((TEST_SCENARIOS_FAILED += 1))
+      return 1
+    fi
+  fi
+
+  if hooks__run_before_scenario; then
     :
   else
     scenario_failed=1
@@ -945,7 +975,7 @@ feature_scenario_run() {
     fi
   done
 
-  if hooks__run_after_all; then
+  if hooks__run_after_scenario; then
     :
   else
     scenario_failed=1
@@ -1663,6 +1693,10 @@ stepdef_hook_register() {
   local body=$1
 
   case $STEPDEF_HOOK_TYPE in
+    BeforeAll)
+      SHELLKIN_BEFORE_ALL_HOOK_HEADERS+=("$STEPDEF_HOOK_HEADER")
+      SHELLKIN_BEFORE_ALL_HOOK_BODIES+=("$body")
+      ;;
     Before)
       SHELLKIN_BEFORE_HOOK_TAGS+=("$STEPDEF_HOOK_TAG")
       SHELLKIN_BEFORE_HOOK_HEADERS+=("$STEPDEF_HOOK_HEADER")
@@ -1673,10 +1707,49 @@ stepdef_hook_register() {
       SHELLKIN_AFTER_HOOK_HEADERS+=("$STEPDEF_HOOK_HEADER")
       SHELLKIN_AFTER_HOOK_BODIES+=("$body")
       ;;
+    AfterAll)
+      SHELLKIN_AFTER_ALL_HOOK_HEADERS+=("$STEPDEF_HOOK_HEADER")
+      SHELLKIN_AFTER_ALL_HOOK_BODIES+=("$body")
+      ;;
   esac
 }
 
 hooks__run_before_all() {
+  local index
+  local hook_header
+  local body
+
+  HOOK_FAILED_HEADER=
+
+  for index in "${!SHELLKIN_BEFORE_ALL_HOOK_BODIES[@]}"; do
+    hook_header=${SHELLKIN_BEFORE_ALL_HOOK_HEADERS[$index]}
+    body=${SHELLKIN_BEFORE_ALL_HOOK_BODIES[$index]}
+    hooks__run_one "$hook_header" "$body" || return 1
+  done
+}
+
+hooks__run_after_all() {
+  local index
+  local hook_header
+  local body
+  local failed=0
+
+  HOOK_FAILED_HEADER=
+
+  for index in "${!SHELLKIN_AFTER_ALL_HOOK_BODIES[@]}"; do
+    hook_header=${SHELLKIN_AFTER_ALL_HOOK_HEADERS[$index]}
+    body=${SHELLKIN_AFTER_ALL_HOOK_BODIES[$index]}
+    if hooks__run_one "$hook_header" "$body"; then
+      :
+    else
+      failed=1
+    fi
+  done
+
+  return "$failed"
+}
+
+hooks__run_before_scenario() {
   local index
   local tag
   local hook_header
@@ -1694,7 +1767,7 @@ hooks__run_before_all() {
   done
 }
 
-hooks__run_after_all() {
+hooks__run_after_scenario() {
   local index
   local tag
   local hook_header
@@ -1822,6 +1895,7 @@ stepdef_parse() {
 
   if stepdef_hook_type_valid "$keyword"; then
     if [[ -n $remainder ]]; then
+      stepdef_hook_tag_allowed "$keyword" || return 1
       stepdef_hook_tag_valid "$remainder" || return 1
     fi
 
@@ -1839,6 +1913,17 @@ stepdef_parse() {
 }
 
 stepdef_hook_type_valid() {
+  case $1 in
+    Before | After | BeforeAll | AfterAll)
+      return 0
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
+stepdef_hook_tag_allowed() {
   case $1 in
     Before | After)
       return 0

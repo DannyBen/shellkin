@@ -126,6 +126,76 @@ EOF
   assert_output_contains "1 scenario, 0 failing"
 }
 
+@test "shellkin runs all hooks around tag-filtered scenarios" {
+  write_file features/sample.feature <<'EOF'
+Feature: Tagged all hooks
+
+@selected
+Scenario: First
+  Then I write 'first'
+
+Scenario: Skipped
+  Then I write 'skipped'
+
+@selected
+Scenario: Second
+  Then I write 'second'
+EOF
+
+  write_file features/step_definitions/core.sh <<'EOF'
+@BeforeAll
+printf 'before-all\n' >> "$TEST_ROOT/result.txt"
+
+@Before
+printf 'before\n' >> "$TEST_ROOT/result.txt"
+
+@After
+printf 'after\n' >> "$TEST_ROOT/result.txt"
+
+@AfterAll
+printf 'after-all\n' >> "$TEST_ROOT/result.txt"
+
+@Then I write '{text}'
+printf 'step:%s\n' "$text" >> "$TEST_ROOT/result.txt"
+EOF
+
+  run "$SHELLKIN_REPO_ROOT/shellkin" -t @selected "$TEST_ROOT/features"
+
+  [ "$status" -eq 0 ]
+  [ "$(cat "$TEST_ROOT/result.txt")" = $'before-all\nbefore\nstep:first\nafter\nbefore\nstep:second\nafter\nafter-all' ]
+  assert_output_contains "Scenario 1: First"
+  [[ "$output" != *"Scenario 2: Skipped"* ]]
+  assert_output_contains "Scenario 3: Second"
+  assert_output_contains "2 scenarios, 0 failing"
+}
+
+@test "shellkin does not run all hooks when tag filters select no scenarios" {
+  write_file features/sample.feature <<'EOF'
+Feature: Unmatched all hooks
+
+@selected
+Scenario: Example
+  Then I write 'selected'
+EOF
+
+  write_file features/step_definitions/core.sh <<'EOF'
+@BeforeAll
+printf 'before-all\n' >> "$TEST_ROOT/result.txt"
+
+@AfterAll
+printf 'after-all\n' >> "$TEST_ROOT/result.txt"
+
+@Then I write '{text}'
+printf 'step:%s\n' "$text" >> "$TEST_ROOT/result.txt"
+EOF
+
+  run "$SHELLKIN_REPO_ROOT/shellkin" -t @missing "$TEST_ROOT/features"
+
+  [ "$status" -eq 0 ]
+  [ ! -e "$TEST_ROOT/result.txt" ]
+  assert_output_contains "0 scenarios, 0 failing"
+}
+
 @test "shellkin rejects invalid CLI tag filters" {
   write_file features/sample.feature <<'EOF'
 Feature: Tagged feature
@@ -496,6 +566,43 @@ EOF
   assert_output_contains "1 scenario, 0 failing"
 }
 
+@test "shellkin runs all hooks around the selected scenario number" {
+  write_file features/sample.feature <<'EOF'
+Feature: All hooks with scenario number
+
+Scenario: First
+  Then I write 'first'
+
+Scenario: Second
+  Then I write 'second'
+EOF
+
+  write_file features/step_definitions/core.sh <<'EOF'
+@BeforeAll
+printf 'before-all\n' >> "$TEST_ROOT/result.txt"
+
+@Before
+printf 'before\n' >> "$TEST_ROOT/result.txt"
+
+@After
+printf 'after\n' >> "$TEST_ROOT/result.txt"
+
+@AfterAll
+printf 'after-all\n' >> "$TEST_ROOT/result.txt"
+
+@Then I write '{text}'
+printf 'step:%s\n' "$text" >> "$TEST_ROOT/result.txt"
+EOF
+
+  run "$SHELLKIN_REPO_ROOT/shellkin" "$TEST_ROOT/features/sample.feature:2"
+
+  [ "$status" -eq 0 ]
+  [ "$(cat "$TEST_ROOT/result.txt")" = $'before-all\nbefore\nstep:second\nafter\nafter-all' ]
+  [[ "$output" != *"Scenario 1: First"* ]]
+  assert_output_contains "Scenario 2: Second"
+  assert_output_contains "1 scenario, 0 failing"
+}
+
 @test "shellkin omits headings for feature files with no selected scenarios" {
   write_file features/first.feature <<'EOF'
 Feature: First feature
@@ -569,4 +676,63 @@ EOF
   [ "$status" -eq 1 ]
   assert_output_contains "validation error in TARGET:"
   assert_output_contains "scenario number out of range: 9"
+}
+
+@test "shellkin aborts when BeforeAll fails and skips AfterAll" {
+  write_file features/sample.feature <<'EOF'
+Feature: Failing BeforeAll
+
+Scenario: First
+  Then I pass
+
+Scenario: Second
+  Then I pass
+EOF
+
+  write_file features/step_definitions/core.sh <<'EOF'
+@BeforeAll
+fail "suite setup failed"
+
+@AfterAll
+printf 'after-all\n' >> "$TEST_ROOT/result.txt"
+
+@Then I pass
+true
+EOF
+
+  run "$SHELLKIN_REPO_ROOT/shellkin" "$TEST_ROOT/features"
+
+  [ "$status" -eq 1 ]
+  [ ! -e "$TEST_ROOT/result.txt" ]
+  assert_output_contains "Scenario 1: First"
+  [[ "$output" != *"Scenario 2: Second"* ]]
+  assert_output_contains "✗ @BeforeAll"
+  assert_output_contains "FAIL_MESSAGE: suite setup failed"
+  assert_output_contains "1 scenario, 0 passing, 1 failing"
+}
+
+@test "shellkin fails when AfterAll fails" {
+  write_file features/sample.feature <<'EOF'
+Feature: Failing AfterAll
+
+Scenario: First
+  Then I pass
+EOF
+
+  write_file features/step_definitions/core.sh <<'EOF'
+@AfterAll
+fail "suite teardown failed"
+
+@Then I pass
+true
+EOF
+
+  run "$SHELLKIN_REPO_ROOT/shellkin" "$TEST_ROOT/features"
+
+  [ "$status" -eq 1 ]
+  assert_output_contains "Scenario 1: First"
+  assert_output_contains "✓ Then I pass"
+  assert_output_contains "✗ @AfterAll"
+  assert_output_contains "FAIL_MESSAGE: suite teardown failed"
+  assert_output_contains "1 scenario, 0 passing, 1 failing"
 }

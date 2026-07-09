@@ -13,6 +13,9 @@
 @Then the output should include '{text}'
   [[ "$(printf '%s' "$LAST_STDOUT" | strip_ansi)" == *"$text"* ]]
 
+@Then the output should not include '{text}'
+  [[ "$(printf '%s' "$LAST_STDOUT" | strip_ansi)" != *"$text"* ]]
+
 @Then the error output should include '{text}'
   [[ "$(printf '%s' "$LAST_STDERR" | strip_ansi)" == *"$text"* ]]
 

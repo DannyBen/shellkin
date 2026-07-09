@@ -85,15 +85,16 @@ Implemented pieces include:
 | Comments (`#`)                | Supported   |
 | Tags (`@tag`)                 | Supported   |
 | `Before`, `After` hooks       | Supported   |
+| `BeforeAll`, `AfterAll` hooks | Supported   |
 | `Rule`                        | Unsupported |
 | `Scenario Outline`            | Unsupported |
 | `Examples`                    | Unsupported |
 | Data tables                   | Unsupported |
-| `BeforeAll`, `AfterAll` hooks | Unsupported |
 
 Tags can be selected with `--tag` / `-t` and skipped with `--exclude-tag` / `-x`.
 `@Before` and `@After` hooks are declared in step definition files and may be
-limited to a tag.
+limited to a tag. `@BeforeAll` and `@AfterAll` hooks are untagged and wrap the
+selected scenario run.
 
 ## Usage
 
@@ -264,10 +265,12 @@ file.
 
 ## Step Definition Hooks
 
-Step definition files can also declare scenario hooks with `@Before` and
-`@After`.
+Step definition files can also declare hooks.
 
 ```bash
+@BeforeAll
+  ./suite-setup
+
 @Before
   mkdir -p tmp
 
@@ -279,12 +282,21 @@ Step definition files can also declare scenario hooks with `@Before` and
 
 @After @needs-server
   ./server stop
+
+@AfterAll
+  ./suite-teardown
 ```
 
 Hooks without a tag run for every scenario. Tagged hooks run only for scenarios
 with that tag, including tags inherited from the feature. `@Before` hooks run
 before background and scenario steps. `@After` hooks run after the scenario
 steps, even when a step or `@Before` hook fails.
+
+`@BeforeAll` runs once before the first selected scenario executes. `@AfterAll`
+runs once after the last selected scenario executes. If no scenario is selected,
+neither all-hook runs. All-hooks do not accept tags. If `@BeforeAll` fails, the
+run aborts immediately and `@AfterAll` does not run. If `@AfterAll` fails, the
+run fails.
 
 Hooks can call helper functions from `support.sh`:
 

@@ -78,7 +78,7 @@ feature_run() {
               :
             else
               failed=1
-              if ((TEST_FAIL_FAST != 0)); then
+              if ((TEST_FAIL_FAST != 0 || TEST_ABORT_RUN != 0)); then
                 TEST_ABORT_RUN=1
                 scenario_seen=0
                 break
@@ -112,7 +112,7 @@ feature_run() {
             :
           else
             failed=1
-            if ((TEST_FAIL_FAST != 0)); then
+            if ((TEST_FAIL_FAST != 0 || TEST_ABORT_RUN != 0)); then
               TEST_ABORT_RUN=1
               scenario_seen=0
               break
@@ -169,7 +169,7 @@ feature_run() {
       :
     else
       failed=1
-      if ((TEST_FAIL_FAST != 0)); then
+      if ((TEST_FAIL_FAST != 0 || TEST_ABORT_RUN != 0)); then
         TEST_ABORT_RUN=1
       fi
     fi
@@ -179,7 +179,7 @@ feature_run() {
       :
     else
       failed=1
-      if ((TEST_FAIL_FAST != 0)); then
+      if ((TEST_FAIL_FAST != 0 || TEST_ABORT_RUN != 0)); then
         TEST_ABORT_RUN=1
       fi
     fi
@@ -518,7 +518,20 @@ feature_scenario_run() {
   output_scenario_start "$scenario_number" "$scenario_name"
 
   set +e
-  if hooks__run_before_all; then
+  if ((${ALL_HOOKS_ACTIVE:-0} == 0)); then
+    if hooks__run_before_all; then
+      ALL_HOOKS_ACTIVE=1
+    else
+      scenario_failed=1
+      TEST_ABORT_RUN=1
+      output_hook_failure "$HOOK_FAILED_HEADER"
+      set -e
+      ((TEST_SCENARIOS_FAILED += 1))
+      return 1
+    fi
+  fi
+
+  if hooks__run_before_scenario; then
     :
   else
     scenario_failed=1
@@ -555,7 +568,7 @@ feature_scenario_run() {
     fi
   done
 
-  if hooks__run_after_all; then
+  if hooks__run_after_scenario; then
     :
   else
     scenario_failed=1
