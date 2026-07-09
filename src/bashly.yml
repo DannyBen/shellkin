@@ -2,7 +2,7 @@ name: shellkin
 help: |
   Gherkin-style BDD Test Framework for Bash Scripts
   Supports configuration from a .shellkin argfile in the working directory
-version: 0.1.3
+version: 0.1.4
 
 argfile: .shellkin
 
