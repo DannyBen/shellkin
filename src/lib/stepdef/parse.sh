@@ -61,6 +61,7 @@ stepdef_parse() {
 
   if stepdef_hook_type_valid "$keyword"; then
     if [[ -n $remainder ]]; then
+      stepdef_hook_tag_allowed "$keyword" || return 1
       stepdef_hook_tag_valid "$remainder" || return 1
     fi
 
@@ -78,6 +79,17 @@ stepdef_parse() {
 }
 
 stepdef_hook_type_valid() {
+  case $1 in
+    Before | After | BeforeAll | AfterAll)
+      return 0
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
+stepdef_hook_tag_allowed() {
   case $1 in
     Before | After)
       return 0

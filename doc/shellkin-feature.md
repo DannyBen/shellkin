@@ -162,7 +162,6 @@ The following common Gherkin constructs are not currently supported:
 - **Scenario Outline**
 - **Examples**
 - data tables
-- **BeforeAll** and **AfterAll** hooks
 
 EXAMPLE
 ==================================================

@@ -91,10 +91,12 @@ patterns do not match unquoted values.
 HOOKS
 ==================================================
 
-Step definition files can also declare scenario hooks with **@Before** and
-**@After**.
+Step definition files can also declare hooks.
 
 ```bash
+@BeforeAll
+  ./suite-setup
+
 @Before
   mkdir -p tmp
 
@@ -106,6 +108,9 @@ Step definition files can also declare scenario hooks with **@Before** and
 
 @After @needs-server
   ./server stop
+
+@AfterAll
+  ./suite-teardown
 ```
 
 Hooks without a tag run for every scenario. Tagged hooks run only for scenarios
@@ -116,6 +121,12 @@ hook fails, the scenario fails and the remaining steps are skipped.
 
 **@After** hooks run after scenario steps, even when a step or **@Before** hook
 fails. If an **@After** hook fails, the scenario fails.
+
+**@BeforeAll** runs once before the first selected scenario executes.
+**@AfterAll** runs once after the last selected scenario executes. If no
+scenario is selected, neither all-hook runs. All-hooks do not accept tags.
+If **@BeforeAll** fails, the run aborts immediately and **@AfterAll** does not
+run. If **@AfterAll** fails, the run fails.
 
 Passing hooks are quiet. Failing hooks are shown in the error report.
 

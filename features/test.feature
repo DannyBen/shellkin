@@ -17,6 +17,7 @@ Scenario: Filtering scenarios by tag
 Scenario: Running hooks from step definition files
   When I run 'shellkin features/fixtures/hooks'
   Then the output should include 'Feature: hooks'
+  And the output should include 'HOOK_COUNTS before-all=1 before=2 after=2 after-all=1 server-start=1 server-stop=1'
   And the output should include '2 scenarios, 0 failing'
   And the exit code should mean success
 

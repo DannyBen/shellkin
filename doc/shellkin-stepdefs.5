@@ -75,10 +75,12 @@ Then the text should include \(aqJim \(dqJimbo\(dq Jackson\(aq
 The opening and closing quote in the feature step must match.
 Quoted token patterns do not match unquoted values.
 .SH HOOKS
-Step definition files can also declare scenario hooks with
-\f[B]\(atBefore\f[R] and \f[B]\(atAfter\f[R].
+Step definition files can also declare hooks.
 .IP
 .EX
+\(atBeforeAll
+  ./suite\-setup
+
 \(atBefore
   mkdir \-p tmp
 
@@ -90,6 +92,9 @@ Step definition files can also declare scenario hooks with
 
 \(atAfter \(atneeds\-server
   ./server stop
+
+\(atAfterAll
+  ./suite\-teardown
 .EE
 .PP
 Hooks without a tag run for every scenario.
@@ -103,6 +108,16 @@ remaining steps are skipped.
 \f[B]\(atAfter\f[R] hooks run after scenario steps, even when a step or
 \f[B]\(atBefore\f[R] hook fails.
 If an \f[B]\(atAfter\f[R] hook fails, the scenario fails.
+.PP
+\f[B]\(atBeforeAll\f[R] runs once before the first selected scenario
+executes.
+\f[B]\(atAfterAll\f[R] runs once after the last selected scenario
+executes.
+If no scenario is selected, neither all\-hook runs.
+All\-hooks do not accept tags.
+If \f[B]\(atBeforeAll\f[R] fails, the run aborts immediately and
+\f[B]\(atAfterAll\f[R] does not run.
+If \f[B]\(atAfterAll\f[R] fails, the run fails.
 .PP
 Passing hooks are quiet.
 Failing hooks are shown in the error report.

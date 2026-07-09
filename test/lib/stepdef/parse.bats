@@ -75,6 +75,24 @@ teardown() {
   [ "$STEPDEF_HOOK_HEADER" = "@After @needs-server" ]
 }
 
+@test "stepdef_parse reads an untagged BeforeAll hook" {
+  stepdef_parse "@BeforeAll"
+
+  [ "$STEPDEF_HEADER_KIND" = "hook" ]
+  [ "$STEPDEF_HOOK_TYPE" = "BeforeAll" ]
+  [ "$STEPDEF_HOOK_TAG" = "" ]
+  [ "$STEPDEF_HOOK_HEADER" = "@BeforeAll" ]
+}
+
+@test "stepdef_parse reads an untagged AfterAll hook" {
+  stepdef_parse "@AfterAll"
+
+  [ "$STEPDEF_HEADER_KIND" = "hook" ]
+  [ "$STEPDEF_HOOK_TYPE" = "AfterAll" ]
+  [ "$STEPDEF_HOOK_TAG" = "" ]
+  [ "$STEPDEF_HOOK_HEADER" = "@AfterAll" ]
+}
+
 @test "stepdef_parse returns non-zero for a line that is not a step definition" {
   run stepdef_parse "echo hello"
 
@@ -95,6 +113,18 @@ teardown() {
 
 @test "stepdef_parse returns non-zero for an invalid hook tag" {
   run stepdef_parse "@Before needs-server"
+
+  [ "$status" -eq 1 ]
+}
+
+@test "stepdef_parse returns non-zero for a tagged BeforeAll hook" {
+  run stepdef_parse "@BeforeAll @needs-server"
+
+  [ "$status" -eq 1 ]
+}
+
+@test "stepdef_parse returns non-zero for a tagged AfterAll hook" {
+  run stepdef_parse "@AfterAll @needs-server"
 
   [ "$status" -eq 1 ]
 }

@@ -3,6 +3,10 @@ stepdef_hook_register() {
   local body=$1
 
   case $STEPDEF_HOOK_TYPE in
+    BeforeAll)
+      SHELLKIN_BEFORE_ALL_HOOK_HEADERS+=("$STEPDEF_HOOK_HEADER")
+      SHELLKIN_BEFORE_ALL_HOOK_BODIES+=("$body")
+      ;;
     Before)
       SHELLKIN_BEFORE_HOOK_TAGS+=("$STEPDEF_HOOK_TAG")
       SHELLKIN_BEFORE_HOOK_HEADERS+=("$STEPDEF_HOOK_HEADER")
@@ -13,10 +17,49 @@ stepdef_hook_register() {
       SHELLKIN_AFTER_HOOK_HEADERS+=("$STEPDEF_HOOK_HEADER")
       SHELLKIN_AFTER_HOOK_BODIES+=("$body")
       ;;
+    AfterAll)
+      SHELLKIN_AFTER_ALL_HOOK_HEADERS+=("$STEPDEF_HOOK_HEADER")
+      SHELLKIN_AFTER_ALL_HOOK_BODIES+=("$body")
+      ;;
   esac
 }
 
 hooks__run_before_all() {
+  local index
+  local hook_header
+  local body
+
+  HOOK_FAILED_HEADER=
+
+  for index in "${!SHELLKIN_BEFORE_ALL_HOOK_BODIES[@]}"; do
+    hook_header=${SHELLKIN_BEFORE_ALL_HOOK_HEADERS[$index]}
+    body=${SHELLKIN_BEFORE_ALL_HOOK_BODIES[$index]}
+    hooks__run_one "$hook_header" "$body" || return 1
+  done
+}
+
+hooks__run_after_all() {
+  local index
+  local hook_header
+  local body
+  local failed=0
+
+  HOOK_FAILED_HEADER=
+
+  for index in "${!SHELLKIN_AFTER_ALL_HOOK_BODIES[@]}"; do
+    hook_header=${SHELLKIN_AFTER_ALL_HOOK_HEADERS[$index]}
+    body=${SHELLKIN_AFTER_ALL_HOOK_BODIES[$index]}
+    if hooks__run_one "$hook_header" "$body"; then
+      :
+    else
+      failed=1
+    fi
+  done
+
+  return "$failed"
+}
+
+hooks__run_before_scenario() {
   local index
   local tag
   local hook_header
@@ -34,7 +77,7 @@ hooks__run_before_all() {
   done
 }
 
-hooks__run_after_all() {
+hooks__run_after_scenario() {
   local index
   local tag
   local hook_header

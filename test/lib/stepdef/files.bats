@@ -12,12 +12,16 @@ setup() {
   STEPDEF_TOKENS_LIST=()
   STEPDEF_CAPTURE_INDEXES_LIST=()
   STEPDEF_BODIES=()
+  SHELLKIN_BEFORE_ALL_HOOK_HEADERS=()
+  SHELLKIN_BEFORE_ALL_HOOK_BODIES=()
   SHELLKIN_BEFORE_HOOK_TAGS=()
   SHELLKIN_BEFORE_HOOK_HEADERS=()
   SHELLKIN_BEFORE_HOOK_BODIES=()
   SHELLKIN_AFTER_HOOK_TAGS=()
   SHELLKIN_AFTER_HOOK_HEADERS=()
   SHELLKIN_AFTER_HOOK_BODIES=()
+  SHELLKIN_AFTER_ALL_HOOK_HEADERS=()
+  SHELLKIN_AFTER_ALL_HOOK_BODIES=()
 }
 
 teardown() {
@@ -106,6 +110,9 @@ EOF
 
 @test "stepdefs_file_parse registers hook bodies from step definition files" {
   write_file stepdefs.sh <<'EOF'
+@BeforeAll
+setup_suite
+
 @Before
 setup_each
 
@@ -115,12 +122,18 @@ start_server
 @After @needs-server
 stop_server
 
+@AfterAll
+teardown_suite
+
 @Then the hook log should include '{text}'
 [[ "$HOOK_LOG" == *"$text"* ]]
 EOF
 
   stepdefs_file_parse "$TEST_ROOT/stepdefs.sh"
 
+  [ "${#SHELLKIN_BEFORE_ALL_HOOK_BODIES[@]}" -eq 1 ]
+  [ "${SHELLKIN_BEFORE_ALL_HOOK_HEADERS[0]}" = "@BeforeAll" ]
+  [ "${SHELLKIN_BEFORE_ALL_HOOK_BODIES[0]}" = $'setup_suite\n' ]
   [ "${#SHELLKIN_BEFORE_HOOK_BODIES[@]}" -eq 2 ]
   [ "${SHELLKIN_BEFORE_HOOK_HEADERS[0]}" = "@Before" ]
   [ "${SHELLKIN_BEFORE_HOOK_BODIES[0]}" = $'setup_each\n' ]
@@ -129,6 +142,8 @@ EOF
   [ "${SHELLKIN_BEFORE_HOOK_BODIES[1]}" = $'start_server\n' ]
   [ "${SHELLKIN_AFTER_HOOK_HEADERS[0]}" = "@After @needs-server" ]
   [ "${SHELLKIN_AFTER_HOOK_BODIES[0]}" = $'stop_server\n' ]
+  [ "${SHELLKIN_AFTER_ALL_HOOK_HEADERS[0]}" = "@AfterAll" ]
+  [ "${SHELLKIN_AFTER_ALL_HOOK_BODIES[0]}" = $'teardown_suite\n' ]
   [ "${STEPDEF_TYPES[0]}" = "Then" ]
 }
 
