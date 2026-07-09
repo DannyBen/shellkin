@@ -84,6 +84,12 @@ root_command() {
   STEPDEF_TOKENS_LIST=()
   STEPDEF_CAPTURE_INDEXES_LIST=()
   STEPDEF_BODIES=()
+  SHELLKIN_BEFORE_HOOK_TAGS=()
+  SHELLKIN_BEFORE_HOOK_HEADERS=()
+  SHELLKIN_BEFORE_HOOK_BODIES=()
+  SHELLKIN_AFTER_HOOK_TAGS=()
+  SHELLKIN_AFTER_HOOK_HEADERS=()
+  SHELLKIN_AFTER_HOOK_BODIES=()
 
   if [[ -f $TARGET_PATH ]]; then
     FEATURES_DIR="$(dirname "$TARGET_PATH")"
@@ -902,6 +908,14 @@ feature_scenario_run() {
   output_scenario_start "$scenario_number" "$scenario_name"
 
   set +e
+  if hooks__run_before_all; then
+    :
+  else
+    scenario_failed=1
+    skip_remaining=1
+    output_hook_failure "$HOOK_FAILED_HEADER"
+  fi
+
   for step in "${background_steps_ref[@]}"; do
     if ((skip_remaining != 0)); then
       feature__recorded_step_parse "$step"
@@ -930,6 +944,13 @@ feature_scenario_run() {
       skip_remaining=1
     fi
   done
+
+  if hooks__run_after_all; then
+    :
+  else
+    scenario_failed=1
+    output_hook_failure "$HOOK_FAILED_HEADER"
+  fi
 
   if defer__run_all; then
     :
@@ -1359,6 +1380,13 @@ output_deferred_failure() {
   output_error_report "Deferred cleanup"
 }
 
+output_hook_failure() {
+  local hook_header=$1
+
+  red "  ✗ $hook_header"
+  output_error_report "$hook_header"
+}
+
 output_summary() {
   local total_scenarios=$1
   local failed_scenarios=$2
@@ -1529,12 +1557,20 @@ stepdefs_file_parse() {
   local next_regex=
   local next_tokens=
   local next_capture_indexes=
+  local next_header_kind=
+  local next_hook_type=
+  local next_hook_tag=
+  local next_hook_header=
   local parsed_new_header=0
   local current_type=
   local current_pattern=
   local current_regex=
   local current_tokens=
   local current_capture_indexes=
+  local current_header_kind=
+  local current_hook_type=
+  local current_hook_tag=
+  local current_hook_header=
   local current_body=
 
   while IFS= read -r line || [[ -n $line ]]; do
@@ -1544,36 +1580,48 @@ stepdefs_file_parse() {
     if [[ $trimmed_line == @* ]]; then
       if stepdef_parse "$trimmed_line"; then
         parsed_new_header=1
+        next_header_kind=$STEPDEF_HEADER_KIND
         next_type=$STEPDEF_TYPE
         next_pattern=$STEPDEF_PATTERN
         next_regex=$STEPDEF_REGEX
         next_tokens=$STEPDEF_TOKENS
         next_capture_indexes=$STEPDEF_CAPTURE_INDEXES
-      elif [[ -z $current_type ]]; then
+        next_hook_type=$STEPDEF_HOOK_TYPE
+        next_hook_tag=$STEPDEF_HOOK_TAG
+        next_hook_header=$STEPDEF_HOOK_HEADER
+      elif [[ -z $current_header_kind ]]; then
         return 1
       fi
     fi
 
     if ((parsed_new_header != 0)); then
-      if [[ -n $current_type ]]; then
+      if [[ -n $current_header_kind ]]; then
+        STEPDEF_HEADER_KIND=$current_header_kind
         STEPDEF_TYPE=$current_type
         STEPDEF_PATTERN=$current_pattern
         STEPDEF_REGEX=$current_regex
         STEPDEF_TOKENS=$current_tokens
         STEPDEF_CAPTURE_INDEXES=$current_capture_indexes
-        stepdef_register "$current_body"
+        STEPDEF_HOOK_TYPE=$current_hook_type
+        STEPDEF_HOOK_TAG=$current_hook_tag
+        STEPDEF_HOOK_HEADER=$current_hook_header
+        stepdefs__current_register "$current_body"
       fi
 
+      current_header_kind=$next_header_kind
       current_type=$next_type
       current_pattern=$next_pattern
       current_regex=$next_regex
       current_tokens=$next_tokens
       current_capture_indexes=$next_capture_indexes
+      current_hook_type=$next_hook_type
+      current_hook_tag=$next_hook_tag
+      current_hook_header=$next_hook_header
       current_body=
       continue
     fi
 
-    if [[ -z $current_type ]]; then
+    if [[ -z $current_header_kind ]]; then
       continue
     fi
 
@@ -1583,14 +1631,134 @@ stepdefs_file_parse() {
     current_body+=$line
   done <"$file"
 
-  if [[ -n $current_type ]]; then
+  if [[ -n $current_header_kind ]]; then
+    STEPDEF_HEADER_KIND=$current_header_kind
     STEPDEF_TYPE=$current_type
     STEPDEF_PATTERN=$current_pattern
     STEPDEF_REGEX=$current_regex
     STEPDEF_TOKENS=$current_tokens
     STEPDEF_CAPTURE_INDEXES=$current_capture_indexes
-    stepdef_register "$current_body"
+    STEPDEF_HOOK_TYPE=$current_hook_type
+    STEPDEF_HOOK_TAG=$current_hook_tag
+    STEPDEF_HOOK_HEADER=$current_hook_header
+    stepdefs__current_register "$current_body"
   fi
+}
+
+stepdefs__current_register() {
+  local body=$1
+
+  case $STEPDEF_HEADER_KIND in
+    step)
+      stepdef_register "$body"
+      ;;
+    hook)
+      stepdef_hook_register "$body"
+      ;;
+  esac
+}
+
+# src/lib/stepdef/hooks.sh
+stepdef_hook_register() {
+  local body=$1
+
+  case $STEPDEF_HOOK_TYPE in
+    Before)
+      SHELLKIN_BEFORE_HOOK_TAGS+=("$STEPDEF_HOOK_TAG")
+      SHELLKIN_BEFORE_HOOK_HEADERS+=("$STEPDEF_HOOK_HEADER")
+      SHELLKIN_BEFORE_HOOK_BODIES+=("$body")
+      ;;
+    After)
+      SHELLKIN_AFTER_HOOK_TAGS+=("$STEPDEF_HOOK_TAG")
+      SHELLKIN_AFTER_HOOK_HEADERS+=("$STEPDEF_HOOK_HEADER")
+      SHELLKIN_AFTER_HOOK_BODIES+=("$body")
+      ;;
+  esac
+}
+
+hooks__run_before_all() {
+  local index
+  local tag
+  local hook_header
+  local body
+
+  HOOK_FAILED_HEADER=
+
+  for index in "${!SHELLKIN_BEFORE_HOOK_BODIES[@]}"; do
+    tag=${SHELLKIN_BEFORE_HOOK_TAGS[$index]}
+    hooks__matches_scenario "$tag" || continue
+
+    hook_header=${SHELLKIN_BEFORE_HOOK_HEADERS[$index]}
+    body=${SHELLKIN_BEFORE_HOOK_BODIES[$index]}
+    hooks__run_one "$hook_header" "$body" || return 1
+  done
+}
+
+hooks__run_after_all() {
+  local index
+  local tag
+  local hook_header
+  local body
+  local failed=0
+
+  HOOK_FAILED_HEADER=
+
+  for index in "${!SHELLKIN_AFTER_HOOK_BODIES[@]}"; do
+    tag=${SHELLKIN_AFTER_HOOK_TAGS[$index]}
+    hooks__matches_scenario "$tag" || continue
+
+    hook_header=${SHELLKIN_AFTER_HOOK_HEADERS[$index]}
+    body=${SHELLKIN_AFTER_HOOK_BODIES[$index]}
+    if hooks__run_one "$hook_header" "$body"; then
+      :
+    else
+      failed=1
+    fi
+  done
+
+  return "$failed"
+}
+
+hooks__run_one() {
+  local hook_header=$1
+  local body=$2
+
+  FAIL_MESSAGE=
+  DOC_STRING=
+  export FAIL_MESSAGE DOC_STRING
+
+  eval "$body" || {
+    HOOK_FAILED_HEADER=$hook_header
+    if [[ -z ${FAIL_MESSAGE:-} ]]; then
+      FAIL_MESSAGE="hook failed: $hook_header"
+      export FAIL_MESSAGE
+    fi
+    return 1
+  }
+}
+
+hooks__matches_scenario() {
+  local tag=$1
+  local -a scenario_tags=()
+
+  [[ -n $tag ]] || return 0
+
+  # shellcheck disable=SC2034  # consumed through nameref by hooks__tags_include
+  read -r -a scenario_tags <<<"${FEATURE_SCENARIO_TAGS:-}"
+  hooks__tags_include scenario_tags "$tag"
+}
+
+hooks__tags_include() {
+  # shellcheck disable=SC2178  # nameref to an array variable by name
+  local -n tags_ref=$1
+  local expected=$2
+  local tag
+
+  for tag in "${tags_ref[@]}"; do
+    [[ $tag == "$expected" ]] && return 0
+  done
+
+  return 1
 }
 
 # src/lib/stepdef/parse.sh
@@ -1618,31 +1786,71 @@ stepdef_register() {
 
 stepdef_parse() {
   local line=$1
+  local keyword
+  local remainder
   local pattern
 
+  STEPDEF_HEADER_KIND=
   STEPDEF_TYPE=
   STEPDEF_PATTERN=
   STEPDEF_REGEX=
   STEPDEF_TOKENS=
   STEPDEF_CAPTURE_INDEXES=
+  STEPDEF_HOOK_TYPE=
+  STEPDEF_HOOK_TAG=
+  STEPDEF_HOOK_HEADER=
 
-  if [[ ! $line =~ ^@([A-Za-z]+)[[:space:]]+(.+)$ ]]; then
+  if [[ ! $line =~ ^@([A-Za-z]+)([[:space:]]+(.*))?$ ]]; then
     return 1
   fi
 
-  pattern=${BASH_REMATCH[2]}
+  keyword=${BASH_REMATCH[1]}
+  remainder=${BASH_REMATCH[3]:-}
 
-  if ! stepdef_type_valid "${BASH_REMATCH[1]}"; then
-    return 1
+  if stepdef_type_valid "$keyword"; then
+    [[ -n $remainder ]] || return 1
+
+    pattern=$remainder
+    STEPDEF_HEADER_KIND=step
+    STEPDEF_TYPE=$keyword
+    STEPDEF_PATTERN=$pattern
+    STEPDEF_REGEX=$(pattern_regex "$pattern")
+    STEPDEF_TOKENS=$(pattern_tokens "$pattern")
+    STEPDEF_CAPTURE_INDEXES=$(pattern_capture_indexes "$pattern")
+    return 0
   fi
 
-  STEPDEF_TYPE=${BASH_REMATCH[1]}
-  STEPDEF_PATTERN=$pattern
-  STEPDEF_REGEX=$(pattern_regex "$pattern")
-  STEPDEF_TOKENS=$(pattern_tokens "$pattern")
-  STEPDEF_CAPTURE_INDEXES=$(pattern_capture_indexes "$pattern")
+  if stepdef_hook_type_valid "$keyword"; then
+    if [[ -n $remainder ]]; then
+      stepdef_hook_tag_valid "$remainder" || return 1
+    fi
 
-  return 0
+    STEPDEF_HEADER_KIND=hook
+    STEPDEF_HOOK_TYPE=$keyword
+    STEPDEF_HOOK_TAG=$remainder
+    STEPDEF_HOOK_HEADER="@$keyword"
+    if [[ -n $remainder ]]; then
+      STEPDEF_HOOK_HEADER+=" $remainder"
+    fi
+    return 0
+  fi
+
+  return 1
+}
+
+stepdef_hook_type_valid() {
+  case $1 in
+    Before | After)
+      return 0
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
+stepdef_hook_tag_valid() {
+  [[ $1 =~ ^@[[:alnum:]_][[:alnum:]_.:-]*$ ]]
 }
 
 # src/lib/stepdef/pattern.sh

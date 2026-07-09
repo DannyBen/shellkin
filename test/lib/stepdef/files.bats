@@ -4,7 +4,7 @@ load ../../test_helper.bash
 
 setup() {
   setup_test_environment
-  source_libs core/trim stepdef/pattern stepdef/parse stepdef/files
+  source_libs core/trim stepdef/pattern stepdef/parse stepdef/hooks stepdef/files
 
   STEPDEF_TYPES=()
   STEPDEF_PATTERNS=()
@@ -12,6 +12,12 @@ setup() {
   STEPDEF_TOKENS_LIST=()
   STEPDEF_CAPTURE_INDEXES_LIST=()
   STEPDEF_BODIES=()
+  SHELLKIN_BEFORE_HOOK_TAGS=()
+  SHELLKIN_BEFORE_HOOK_HEADERS=()
+  SHELLKIN_BEFORE_HOOK_BODIES=()
+  SHELLKIN_AFTER_HOOK_TAGS=()
+  SHELLKIN_AFTER_HOOK_HEADERS=()
+  SHELLKIN_AFTER_HOOK_BODIES=()
 }
 
 teardown() {
@@ -98,10 +104,49 @@ EOF
   [[ "${STEPDEF_BODIES[1]}" == *'[[ -f "$path" ]]'* ]]
 }
 
+@test "stepdefs_file_parse registers hook bodies from step definition files" {
+  write_file stepdefs.sh <<'EOF'
+@Before
+setup_each
+
+@Before @needs-server
+start_server
+
+@After @needs-server
+stop_server
+
+@Then the hook log should include '{text}'
+[[ "$HOOK_LOG" == *"$text"* ]]
+EOF
+
+  stepdefs_file_parse "$TEST_ROOT/stepdefs.sh"
+
+  [ "${#SHELLKIN_BEFORE_HOOK_BODIES[@]}" -eq 2 ]
+  [ "${SHELLKIN_BEFORE_HOOK_HEADERS[0]}" = "@Before" ]
+  [ "${SHELLKIN_BEFORE_HOOK_BODIES[0]}" = $'setup_each\n' ]
+  [ "${SHELLKIN_BEFORE_HOOK_TAGS[1]}" = "@needs-server" ]
+  [ "${SHELLKIN_BEFORE_HOOK_HEADERS[1]}" = "@Before @needs-server" ]
+  [ "${SHELLKIN_BEFORE_HOOK_BODIES[1]}" = $'start_server\n' ]
+  [ "${SHELLKIN_AFTER_HOOK_HEADERS[0]}" = "@After @needs-server" ]
+  [ "${SHELLKIN_AFTER_HOOK_BODIES[0]}" = $'stop_server\n' ]
+  [ "${STEPDEF_TYPES[0]}" = "Then" ]
+}
+
 @test "stepdefs_file_parse returns non-zero for an invalid step definition header" {
   write_file stepdefs.sh <<'EOF'
 @When
 run "$command"
+EOF
+
+  run stepdefs_file_parse "$TEST_ROOT/stepdefs.sh"
+
+  [ "$status" -eq 1 ]
+}
+
+@test "stepdefs_file_parse returns non-zero for an invalid hook header" {
+  write_file stepdefs.sh <<'EOF'
+@Before needs-server
+start_server
 EOF
 
   run stepdefs_file_parse "$TEST_ROOT/stepdefs.sh"

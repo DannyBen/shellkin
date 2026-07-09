@@ -25,29 +25,69 @@ stepdef_register() {
 ## Parses one step definition header into reusable fields.
 stepdef_parse() {
   local line=$1
+  local keyword
+  local remainder
   local pattern
 
+  STEPDEF_HEADER_KIND=
   STEPDEF_TYPE=
   STEPDEF_PATTERN=
   STEPDEF_REGEX=
   STEPDEF_TOKENS=
   STEPDEF_CAPTURE_INDEXES=
+  STEPDEF_HOOK_TYPE=
+  STEPDEF_HOOK_TAG=
+  STEPDEF_HOOK_HEADER=
 
-  if [[ ! $line =~ ^@([A-Za-z]+)[[:space:]]+(.+)$ ]]; then
+  if [[ ! $line =~ ^@([A-Za-z]+)([[:space:]]+(.*))?$ ]]; then
     return 1
   fi
 
-  pattern=${BASH_REMATCH[2]}
+  keyword=${BASH_REMATCH[1]}
+  remainder=${BASH_REMATCH[3]:-}
 
-  if ! stepdef_type_valid "${BASH_REMATCH[1]}"; then
-    return 1
+  if stepdef_type_valid "$keyword"; then
+    [[ -n $remainder ]] || return 1
+
+    pattern=$remainder
+    STEPDEF_HEADER_KIND=step
+    STEPDEF_TYPE=$keyword
+    STEPDEF_PATTERN=$pattern
+    STEPDEF_REGEX=$(pattern_regex "$pattern")
+    STEPDEF_TOKENS=$(pattern_tokens "$pattern")
+    STEPDEF_CAPTURE_INDEXES=$(pattern_capture_indexes "$pattern")
+    return 0
   fi
 
-  STEPDEF_TYPE=${BASH_REMATCH[1]}
-  STEPDEF_PATTERN=$pattern
-  STEPDEF_REGEX=$(pattern_regex "$pattern")
-  STEPDEF_TOKENS=$(pattern_tokens "$pattern")
-  STEPDEF_CAPTURE_INDEXES=$(pattern_capture_indexes "$pattern")
+  if stepdef_hook_type_valid "$keyword"; then
+    if [[ -n $remainder ]]; then
+      stepdef_hook_tag_valid "$remainder" || return 1
+    fi
 
-  return 0
+    STEPDEF_HEADER_KIND=hook
+    STEPDEF_HOOK_TYPE=$keyword
+    STEPDEF_HOOK_TAG=$remainder
+    STEPDEF_HOOK_HEADER="@$keyword"
+    if [[ -n $remainder ]]; then
+      STEPDEF_HOOK_HEADER+=" $remainder"
+    fi
+    return 0
+  fi
+
+  return 1
+}
+
+stepdef_hook_type_valid() {
+  case $1 in
+    Before | After)
+      return 0
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
+stepdef_hook_tag_valid() {
+  [[ $1 =~ ^@[[:alnum:]_][[:alnum:]_.:-]*$ ]]
 }
