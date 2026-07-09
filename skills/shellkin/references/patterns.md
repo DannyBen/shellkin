@@ -91,7 +91,7 @@ Use generic path-oriented steps when possible so they can be reused in many feat
 
 When reviewing Shellkin tests, check for:
 
-- Unsupported Gherkin forms such as `Scenario Outline`, `Examples`, tags, or tables
+- Unsupported Gherkin forms such as `Scenario Outline`, `Examples`, hooks, or tables
 - `And` or `*` used as the first step in a scenario or background
 - Step text in features that does not exactly line up with step definition headers
 - One-off step definitions that should be generalized with `{tokens}`

@@ -32,12 +32,13 @@ Conflicts With: \f[B]\-\-init\f[R]
 .SS \-\-validate, \-v
 Validate feature and step definition files
 .IP \(bu 2
-Conflicts With: \f[B]\-\-init\f[R]
+Conflicts With: \f[B]\-\-init, \-\-tag, \-\-exclude\-tag\f[R]
 .SS \-\-init
 Initialize a Shellkin features directory
 .IP \(bu 2
-Conflicts With: \f[B]\-\-validate, \-\-fail\-fast, \-\-load\f[R]
-.SS \-\-default\-target, \-t DIR
+Conflicts With: \f[B]\-\-validate, \-\-fail\-fast, \-\-load, \-\-tag,
+\-\-exclude\-tag\f[R]
+.SS \-\-default\-target DIR
 Path to features directory
 .PP
 Relative to working directory
@@ -45,6 +46,18 @@ Relative to working directory
 Normally only used in a .shellkin argfile
 .IP \(bu 2
 Default Value: \f[B]features\f[R]
+.SS \-\-tag, \-t TAG
+Run scenarios with this tag
+.IP \(bu 2
+\f[I]Repeatable\f[R]
+.IP \(bu 2
+Conflicts With: \f[B]\-\-init, \-\-validate\f[R]
+.SS \-\-exclude\-tag, \-x TAG
+Skip scenarios with this tag
+.IP \(bu 2
+\f[I]Repeatable\f[R]
+.IP \(bu 2
+Conflicts With: \f[B]\-\-init, \-\-validate\f[R]
 .SS \-\-stepdefs, \-s DIR
 Path to step definitions directory
 .PP

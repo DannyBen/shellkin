@@ -43,6 +43,109 @@ EOF
   assert_output_contains "1 scenario, 0 failing"
 }
 
+@test "shellkin accepts feature and scenario tags" {
+  write_file features/sample.feature <<'EOF'
+@filesystem
+Feature: Create a file
+
+@smoke @needs-server
+Scenario: Touch a file
+  Then I write 'tagged'
+EOF
+
+  write_file features/step_definitions/core.sh <<'EOF'
+@Then I write '{text}'
+printf '%s' "$text" > "$TEST_ROOT/result.txt"
+EOF
+
+  run "$SHELLKIN_REPO_ROOT/shellkin" "$TEST_ROOT/features"
+
+  [ "$status" -eq 0 ]
+  [ "$(cat "$TEST_ROOT/result.txt")" = "tagged" ]
+  assert_output_contains "Feature: Create a file"
+  assert_output_contains "Scenario 1: Touch a file"
+  assert_output_contains "1 scenario, 0 failing"
+}
+
+@test "shellkin filters scenarios by included and excluded tags" {
+  write_file features/sample.feature <<'EOF'
+Feature: Tagged scenarios
+
+@slow
+Scenario: Slow
+  Then I write 'slow'
+
+@smoke
+Scenario: Smoke
+  Then I write 'smoke'
+
+@unit
+Scenario: Unit
+  Then I write 'unit'
+EOF
+
+  write_file features/step_definitions/core.sh <<'EOF'
+@Then I write '{text}'
+printf '%s\n' "$text" >> "$TEST_ROOT/result.txt"
+EOF
+
+  run "$SHELLKIN_REPO_ROOT/shellkin" -t @smoke -t @unit -x @slow "$TEST_ROOT/features"
+
+  [ "$status" -eq 0 ]
+  [ "$(cat "$TEST_ROOT/result.txt")" = $'smoke\nunit' ]
+  [[ "$output" != *"Scenario 1: Slow"* ]]
+  assert_output_contains "Scenario 2: Smoke"
+  assert_output_contains "Scenario 3: Unit"
+  assert_output_contains "2 scenarios, 0 failing"
+}
+
+@test "shellkin tag filters include inherited feature tags" {
+  write_file features/sample.feature <<'EOF'
+@filesystem
+Feature: Tagged feature
+
+@slow
+Scenario: Slow
+  Then I write 'slow'
+
+Scenario: Normal
+  Then I write 'normal'
+EOF
+
+  write_file features/step_definitions/core.sh <<'EOF'
+@Then I write '{text}'
+printf '%s\n' "$text" >> "$TEST_ROOT/result.txt"
+EOF
+
+  run "$SHELLKIN_REPO_ROOT/shellkin" --tag @filesystem --exclude-tag @slow "$TEST_ROOT/features"
+
+  [ "$status" -eq 0 ]
+  [ "$(cat "$TEST_ROOT/result.txt")" = "normal" ]
+  [[ "$output" != *"Scenario 1: Slow"* ]]
+  assert_output_contains "Scenario 2: Normal"
+  assert_output_contains "1 scenario, 0 failing"
+}
+
+@test "shellkin rejects invalid CLI tag filters" {
+  write_file features/sample.feature <<'EOF'
+Feature: Tagged feature
+
+Scenario: Example
+  Then I pass
+EOF
+
+  write_file features/step_definitions/core.sh <<'EOF'
+@Then I pass
+true
+EOF
+
+  run "$SHELLKIN_REPO_ROOT/shellkin" -t smoke "$TEST_ROOT/features"
+
+  [ "$status" -eq 1 ]
+  assert_output_contains "validation error in TAGS:"
+  assert_output_contains "invalid tag: smoke"
+}
+
 @test "shellkin uses --stepdefs relative to the features root" {
   write_file custom_features/sample.feature <<'EOF'
 Feature: Create a file

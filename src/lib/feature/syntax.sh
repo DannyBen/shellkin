@@ -8,6 +8,7 @@ feature_line_parse() {
   FEATURE_LINE_NAME=
   FEATURE_STEP_TYPE=
   FEATURE_STEP_TEXT=
+  FEATURE_TAG_TEXT=
 
   if [[ -z $line ]]; then
     FEATURE_LINE_KIND=blank
@@ -33,6 +34,12 @@ feature_line_parse() {
   if [[ $line =~ ^Scenario:[[:space:]]*(.*)$ ]]; then
     FEATURE_LINE_KIND=scenario
     FEATURE_LINE_NAME=${BASH_REMATCH[1]}
+    return 0
+  fi
+
+  if [[ $line == @* ]]; then
+    FEATURE_LINE_KIND=tag
+    FEATURE_TAG_TEXT=$line
     return 0
   fi
 

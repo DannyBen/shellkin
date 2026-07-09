@@ -53,6 +53,13 @@ teardown() {
   [ "$FEATURE_LINE_KIND" = "comment" ]
 }
 
+@test "feature_line_parse recognizes a tag line" {
+  feature_line_parse "  @fast @needs-server"
+
+  [ "$FEATURE_LINE_KIND" = "tag" ]
+  [ "$FEATURE_TAG_TEXT" = "@fast @needs-server" ]
+}
+
 @test "feature_line_parse leaves unsupported text as other" {
   feature_line_parse "plain descriptive text"
 

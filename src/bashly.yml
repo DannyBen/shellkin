@@ -27,18 +27,29 @@ flags:
 - long: --validate
   short: -v
   help: Validate feature and step definition files
-  conflicts: [--init]
+  conflicts: [--init, --tag, --exclude-tag]
 - long: --init
   help: Initialize a Shellkin features directory
-  conflicts: [--validate, --fail-fast, --load]
+  conflicts: [--validate, --fail-fast, --load, --tag, --exclude-tag]
 - long: --default-target
-  short: -t
   help: |
     Path to features directory  
     Relative to working directory  
     Normally only used in a .shellkin argfile
   arg: dir
   default: features
+- long: --tag
+  short: -t
+  arg: tag
+  help: Run scenarios with this tag
+  repeatable: true
+  conflicts: [--init, --validate]
+- long: --exclude-tag
+  short: -x
+  arg: tag
+  help: Skip scenarios with this tag
+  repeatable: true
+  conflicts: [--init, --validate]
 - long: --stepdefs
   short: -s
   arg: dir

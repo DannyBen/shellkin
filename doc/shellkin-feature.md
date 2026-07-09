@@ -116,6 +116,25 @@ Lines starting with **#** are treated as comments.
 Feature: Example
 ```
 
+TAGS
+==================================================
+
+Tags can be placed before a **Feature:** or **Scenario:**.
+
+```gherkin
+@filesystem
+Feature: Files
+
+@smoke
+Scenario: Create a file
+  When I run 'touch one'
+  Then the file 'one' should exist
+```
+
+Feature tags are inherited by the scenarios in that feature. Use
+**shellkin --tag @tag** to run scenarios with a tag, and
+**shellkin --exclude-tag @tag** to skip scenarios with a tag.
+
 DOC STRINGS
 ==================================================
 
@@ -143,7 +162,7 @@ The following common Gherkin constructs are not currently supported:
 - **Scenario Outline**
 - **Examples**
 - data tables
-- tags such as **@slow**
+- hooks
 
 EXAMPLE
 ==================================================
