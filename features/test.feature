@@ -14,6 +14,12 @@ Scenario: Filtering scenarios by tag
   And the output should include '1 scenario, 0 failing'
   And the exit code should mean success
 
+Scenario: Running hooks from step definition files
+  When I run 'shellkin features/fixtures/hooks'
+  Then the output should include 'Feature: hooks'
+  And the output should include '2 scenarios, 0 failing'
+  And the exit code should mean success
+
 Scenario: Running a failing test
   When I run 'shellkin features/fixtures/selective/failing.feature'
   Then the output should include 'Feature: two'

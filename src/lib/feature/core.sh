@@ -518,6 +518,14 @@ feature_scenario_run() {
   output_scenario_start "$scenario_number" "$scenario_name"
 
   set +e
+  if hooks__run_before_all; then
+    :
+  else
+    scenario_failed=1
+    skip_remaining=1
+    output_hook_failure "$HOOK_FAILED_HEADER"
+  fi
+
   for step in "${background_steps_ref[@]}"; do
     if ((skip_remaining != 0)); then
       feature__recorded_step_parse "$step"
@@ -546,6 +554,13 @@ feature_scenario_run() {
       skip_remaining=1
     fi
   done
+
+  if hooks__run_after_all; then
+    :
+  else
+    scenario_failed=1
+    output_hook_failure "$HOOK_FAILED_HEADER"
+  fi
 
   if defer__run_all; then
     :

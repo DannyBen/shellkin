@@ -19,7 +19,7 @@ Check these first when you need Shellkin-specific facts:
 - `man 5 shellkin-feature`
 - `man 5 shellkin-stepdefs`
 
-Use the man pages to confirm command usage, environment variables, supported feature-file syntax, step definition rules, and helper behavior before making assumptions.
+Use the man pages to confirm command usage, environment variables, supported feature-file syntax, step definition rules, hooks, and helper behavior before making assumptions.
 
 If external reference is useful, Shellkin source code and documentation are available at `https://github.com/DannyBen/shellkin`, but prefer installed man pages for user-facing behavior.
 
@@ -69,6 +69,7 @@ If that file grows too large, keep `support.sh` as the entrypoint, add a sibling
 - Use `Scenario:` for each executable example.
 - Tags such as `@slow` may be placed before `Feature:` or `Scenario:`.
 - Use `shellkin -t @tag` to run matching scenarios and `shellkin -x @tag` to skip matching scenarios.
+- Use `@Before` and `@After` hooks in step definition files when setup or cleanup should wrap scenarios.
 - Keep scenarios small and concrete.
 - `And`, `But`, and `*` inherit the semantic type of the previous step, so they cannot be the first step in a scenario or background.
 - Use doc strings with `"""` for multiline expectations or input.
@@ -79,7 +80,7 @@ Do not use unsupported constructs:
 - `Scenario Outline`
 - `Examples`
 - data tables
-- hooks
+- `BeforeAll` and `AfterAll` hooks
 
 ## Step Definition Rules
 
@@ -92,7 +93,8 @@ Step definitions live in shell files under `step_definitions/` and use headers l
 
 Follow these rules:
 
-- Headers must begin with `@Given`, `@When`, or `@Then`.
+- Step headers must begin with `@Given`, `@When`, or `@Then`.
+- Hook headers must be `@Before`, `@After`, `@Before @tag`, or `@After @tag`.
 - The body continues until the next header or end of file.
 - Indent step bodies by two spaces for readability.
 - Use named `{tokens}` for variable parts.

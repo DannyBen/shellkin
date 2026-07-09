@@ -89,6 +89,14 @@ output_deferred_failure() {
   output_error_report "Deferred cleanup"
 }
 
+## Prints a hook failure section.
+output_hook_failure() {
+  local hook_header=$1
+
+  red "  ✗ $hook_header"
+  output_error_report "$hook_header"
+}
+
 ## Prints the final summary for a test run.
 output_summary() {
   local total_scenarios=$1

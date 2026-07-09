@@ -52,8 +52,8 @@ The step body is plain shell code.
 
 Indenting the body is recommended for readability, but optional.
 
-Each definition continues until the next valid step header or the end of the
-file.
+Each definition continues until the next valid step or hook header or the end
+of the file.
 
 Tokens
 --------------------------------------------------
@@ -87,6 +87,59 @@ Then the text should include 'Jim "Jimbo" Jackson'
 
 The opening and closing quote in the feature step must match. Quoted token
 patterns do not match unquoted values.
+
+HOOKS
+==================================================
+
+Step definition files can also declare scenario hooks with **@Before** and
+**@After**.
+
+```bash
+@Before
+  mkdir -p tmp
+
+@After
+  rm -rf tmp
+
+@Before @needs-server
+  ./server start
+
+@After @needs-server
+  ./server stop
+```
+
+Hooks without a tag run for every scenario. Tagged hooks run only for scenarios
+with that tag, including tags inherited from the feature.
+
+**@Before** hooks run before background and scenario steps. If a **@Before**
+hook fails, the scenario fails and the remaining steps are skipped.
+
+**@After** hooks run after scenario steps, even when a step or **@Before** hook
+fails. If an **@After** hook fails, the scenario fails.
+
+Passing hooks are quiet. Failing hooks are shown in the error report.
+
+Hooks can call helper functions from **support.sh**:
+
+```bash
+# features/support.sh
+start_server() {
+  ./server start
+}
+
+stop_server() {
+  ./server stop
+}
+```
+
+```bash
+# features/step_definitions/hooks.sh
+@Before @needs-server
+  start_server
+
+@After @needs-server
+  stop_server
+```
 
 HELPERS
 ==================================================

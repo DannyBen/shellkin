@@ -41,8 +41,8 @@ The step body is plain shell code.
 .PP
 Indenting the body is recommended for readability, but optional.
 .PP
-Each definition continues until the next valid step header or the end of
-the file.
+Each definition continues until the next valid step or hook header or
+the end of the file.
 .SS Tokens
 Patterns may contain named tokens in braces.
 .IP
@@ -74,6 +74,60 @@ Then the text should include \(aqJim \(dqJimbo\(dq Jackson\(aq
 .PP
 The opening and closing quote in the feature step must match.
 Quoted token patterns do not match unquoted values.
+.SH HOOKS
+Step definition files can also declare scenario hooks with
+\f[B]\(atBefore\f[R] and \f[B]\(atAfter\f[R].
+.IP
+.EX
+\(atBefore
+  mkdir \-p tmp
+
+\(atAfter
+  rm \-rf tmp
+
+\(atBefore \(atneeds\-server
+  ./server start
+
+\(atAfter \(atneeds\-server
+  ./server stop
+.EE
+.PP
+Hooks without a tag run for every scenario.
+Tagged hooks run only for scenarios with that tag, including tags
+inherited from the feature.
+.PP
+\f[B]\(atBefore\f[R] hooks run before background and scenario steps.
+If a \f[B]\(atBefore\f[R] hook fails, the scenario fails and the
+remaining steps are skipped.
+.PP
+\f[B]\(atAfter\f[R] hooks run after scenario steps, even when a step or
+\f[B]\(atBefore\f[R] hook fails.
+If an \f[B]\(atAfter\f[R] hook fails, the scenario fails.
+.PP
+Passing hooks are quiet.
+Failing hooks are shown in the error report.
+.PP
+Hooks can call helper functions from \f[B]support.sh\f[R]:
+.IP
+.EX
+\f[I]# features/support.sh\f[R]
+start_server() \f[B]{\f[R]
+  ./server start
+\f[B]}\f[R]
+
+stop_server() \f[B]{\f[R]
+  ./server stop
+\f[B]}\f[R]
+.EE
+.IP
+.EX
+\f[I]# features/step_definitions/hooks.sh\f[R]
+\(atBefore \(atneeds\-server
+  start_server
+
+\(atAfter \(atneeds\-server
+  stop_server
+.EE
 .SH HELPERS
 .SS run
 Run a shell command and capture its result for later assertions.

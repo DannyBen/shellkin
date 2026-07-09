@@ -57,6 +57,24 @@ teardown() {
   [ "$STEPDEF_TOKENS" = "directory" ]
 }
 
+@test "stepdef_parse reads a global Before hook" {
+  stepdef_parse "@Before"
+
+  [ "$STEPDEF_HEADER_KIND" = "hook" ]
+  [ "$STEPDEF_HOOK_TYPE" = "Before" ]
+  [ "$STEPDEF_HOOK_TAG" = "" ]
+  [ "$STEPDEF_HOOK_HEADER" = "@Before" ]
+}
+
+@test "stepdef_parse reads a tagged After hook" {
+  stepdef_parse "@After @needs-server"
+
+  [ "$STEPDEF_HEADER_KIND" = "hook" ]
+  [ "$STEPDEF_HOOK_TYPE" = "After" ]
+  [ "$STEPDEF_HOOK_TAG" = "@needs-server" ]
+  [ "$STEPDEF_HOOK_HEADER" = "@After @needs-server" ]
+}
+
 @test "stepdef_parse returns non-zero for a line that is not a step definition" {
   run stepdef_parse "echo hello"
 
@@ -71,6 +89,12 @@ teardown() {
 
 @test "stepdef_parse returns non-zero for the non-standard Step keyword" {
   run stepdef_parse "@Step I run '{command}'"
+
+  [ "$status" -eq 1 ]
+}
+
+@test "stepdef_parse returns non-zero for an invalid hook tag" {
+  run stepdef_parse "@Before needs-server"
 
   [ "$status" -eq 1 ]
 }

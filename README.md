@@ -84,14 +84,16 @@ Implemented pieces include:
 | Doc strings (`"""`)           | Supported   |
 | Comments (`#`)                | Supported   |
 | Tags (`@tag`)                 | Supported   |
+| `Before`, `After` hooks       | Supported   |
 | `Rule`                        | Unsupported |
 | `Scenario Outline`            | Unsupported |
 | `Examples`                    | Unsupported |
 | Data tables                   | Unsupported |
-| `Before`, `After` hooks       | Unsupported |
 | `BeforeAll`, `AfterAll` hooks | Unsupported |
 
 Tags can be selected with `--tag` / `-t` and skipped with `--exclude-tag` / `-x`.
+`@Before` and `@After` hooks are declared in step definition files and may be
+limited to a tag.
 
 ## Usage
 
@@ -209,10 +211,6 @@ shellkin --init
 Step definitions are shell snippets declared in files under
 `step_definitions/`.
 
-To share helper functions across step definition files, place them in
-`support.sh` under the features directory. For additional support scripts, use
-`--load` or configure them in `.shellkin`.
-
 ```bash
 @When I run '{command}'
   run "$command"
@@ -261,7 +259,54 @@ Then the text should include 'Jim "Jimbo" Jackson'
 The opening and closing quote in the feature step must match. Quoted token
 patterns do not match unquoted values.
 
-Each definition continues until the next step header or the end of the file.
+Each definition continues until the next step or hook header or the end of the
+file.
+
+## Step Definition Hooks
+
+Step definition files can also declare scenario hooks with `@Before` and
+`@After`.
+
+```bash
+@Before
+  mkdir -p tmp
+
+@After
+  rm -rf tmp
+
+@Before @needs-server
+  ./server start
+
+@After @needs-server
+  ./server stop
+```
+
+Hooks without a tag run for every scenario. Tagged hooks run only for scenarios
+with that tag, including tags inherited from the feature. `@Before` hooks run
+before background and scenario steps. `@After` hooks run after the scenario
+steps, even when a step or `@Before` hook fails.
+
+Hooks can call helper functions from `support.sh`:
+
+```bash
+# features/support.sh
+start_server() {
+  ./server start
+}
+
+stop_server() {
+  ./server stop
+}
+```
+
+```bash
+# features/step_definitions/hooks.sh
+@Before @needs-server
+  start_server
+
+@After @needs-server
+  stop_server
+```
 
 ## Step Helpers
 
