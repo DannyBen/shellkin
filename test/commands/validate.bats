@@ -75,3 +75,48 @@ EOF
   [ "$status" -eq 1 ]
   assert_output_contains "line 7: Background must appear after Feature and before the first Scenario"
 }
+
+@test "shellkin --validate fails for invalid tag syntax" {
+  write_file features/sample.feature <<'EOF'
+Feature: Invalid tag
+
+@valid not-a-tag
+Scenario: Example
+  Given setup
+EOF
+
+  write_file features/step_definitions/core.sh <<'EOF'
+@Given setup
+true
+EOF
+
+  run "$SHELLKIN_REPO_ROOT/shellkin" --validate "$TEST_ROOT/features"
+
+  [ "$status" -eq 1 ]
+  assert_output_contains "line 3: invalid tag syntax"
+  assert_output_contains "@valid not-a-tag"
+}
+
+@test "shellkin --validate fails for a tag before Background" {
+  write_file features/sample.feature <<'EOF'
+Feature: Invalid tag placement
+
+@setup
+Background:
+  Given setup
+
+Scenario: Example
+  Given setup
+EOF
+
+  write_file features/step_definitions/core.sh <<'EOF'
+@Given setup
+true
+EOF
+
+  run "$SHELLKIN_REPO_ROOT/shellkin" --validate "$TEST_ROOT/features"
+
+  [ "$status" -eq 1 ]
+  assert_output_contains "line 3: tag must appear before Feature or Scenario"
+  assert_output_contains "@setup"
+}

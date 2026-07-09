@@ -53,16 +53,16 @@ Abort after the first failing scenario
 
 Validate feature and step definition files
 
-- Conflicts With: **--init**
+- Conflicts With: **--init, --tag, --exclude-tag**
 
 --init
 --------------------------------------------------
 
 Initialize a Shellkin features directory
 
-- Conflicts With: **--validate, --fail-fast, --load**
+- Conflicts With: **--validate, --fail-fast, --load, --tag, --exclude-tag**
 
---default-target, -t DIR
+--default-target DIR
 --------------------------------------------------
 
 Path to features directory
@@ -73,6 +73,22 @@ Normally only used in a .shellkin argfile
 
 
 - Default Value: **features**
+
+--tag, -t TAG
+--------------------------------------------------
+
+Run scenarios with this tag
+
+- *Repeatable*
+- Conflicts With: **--init, --validate**
+
+--exclude-tag, -x TAG
+--------------------------------------------------
+
+Skip scenarios with this tag
+
+- *Repeatable*
+- Conflicts With: **--init, --validate**
 
 --stepdefs, -s DIR
 --------------------------------------------------

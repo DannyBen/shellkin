@@ -67,6 +67,8 @@ If that file grows too large, keep `support.sh` as the entrypoint, add a sibling
 - Free text under `Feature:` is allowed before the first section.
 - Use `Background:` only for setup shared by every scenario in that file.
 - Use `Scenario:` for each executable example.
+- Tags such as `@slow` may be placed before `Feature:` or `Scenario:`.
+- Use `shellkin -t @tag` to run matching scenarios and `shellkin -x @tag` to skip matching scenarios.
 - Keep scenarios small and concrete.
 - `And`, `But`, and `*` inherit the semantic type of the previous step, so they cannot be the first step in a scenario or background.
 - Use doc strings with `"""` for multiline expectations or input.
@@ -77,7 +79,7 @@ Do not use unsupported constructs:
 - `Scenario Outline`
 - `Examples`
 - data tables
-- tags such as `@slow`
+- hooks
 
 ## Step Definition Rules
 

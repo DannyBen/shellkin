@@ -72,22 +72,26 @@ Implemented pieces include:
 
 ### Gherkin Feature Support
 
-| Feature                  | Status      |
-|:-------------------------|:------------|
-| `Feature`                | Supported   |
-| Feature description text | Supported   |
-| `Scenario`               | Supported   |
-| `Background`             | Supported   |
-| `Given`, `When`, `Then`  | Supported   |
-| `And` , `But`            | Supported   |
-| `*` step keyword         | Supported   |
-| Doc strings (`"""`)      | Supported   |
-| Comments (`#`)           | Supported   |
-| `Rule`                   | Unsupported |
-| `Scenario Outline`       | Unsupported |
-| `Examples`               | Unsupported |
-| Data tables              | Unsupported |
-| Tags (`@tag`)            | Unsupported |
+| Feature                       | Status      |
+|:------------------------------|:------------|
+| `Feature`                     | Supported   |
+| Feature description text      | Supported   |
+| `Scenario`                    | Supported   |
+| `Background`                  | Supported   |
+| `Given`, `When`, `Then`       | Supported   |
+| `And` , `But`                 | Supported   |
+| `*` step keyword              | Supported   |
+| Doc strings (`"""`)           | Supported   |
+| Comments (`#`)                | Supported   |
+| Tags (`@tag`)                 | Supported   |
+| `Rule`                        | Unsupported |
+| `Scenario Outline`            | Unsupported |
+| `Examples`                    | Unsupported |
+| Data tables                   | Unsupported |
+| `Before`, `After` hooks       | Unsupported |
+| `BeforeAll`, `AfterAll` hooks | Unsupported |
+
+Tags can be selected with `--tag` / `-t` and skipped with `--exclude-tag` / `-x`.
 
 ## Usage
 
@@ -103,6 +107,12 @@ shellkin --validate
 
 # Stop after the first failing scenario:
 shellkin --fail-fast
+
+# Run scenarios tagged @smoke:
+shellkin -t @smoke
+
+# Skip scenarios tagged @slow:
+shellkin -x @slow
 
 # Run a specific directory:
 shellkin path/to/features

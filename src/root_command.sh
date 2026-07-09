@@ -7,7 +7,11 @@ fail_fast=${args['--fail-fast']:-0}
 validate_mode=${args['--validate']:-0}
 init_mode=${args['--init']:-0}
 load_args=${args['--load']:-}
+tag_args=${args['--tag']:-}
+exclude_tag_args=${args['--exclude-tag']:-}
 load_paths=()
+include_tags=()
+exclude_tags=()
 feature_status=0
 validation_status=0
 validation_total=0
@@ -16,6 +20,19 @@ feature_files=()
 
 if [[ -n $load_args ]]; then
   eval "load_paths=( $load_args )"
+fi
+
+if [[ -n $tag_args ]]; then
+  eval "include_tags=( $tag_args )"
+fi
+
+if [[ -n $exclude_tag_args ]]; then
+  eval "exclude_tags=( $exclude_tag_args )"
+fi
+
+if ! feature_tags_validate "${include_tags[@]}" "${exclude_tags[@]}"; then
+  printf 'validation error in TAGS:\n%s\n' "$FEATURE_TAG_ERROR" >&2
+  return 1
 fi
 
 if ((init_mode != 0)); then
@@ -136,6 +153,8 @@ else
   TEST_SCENARIOS_TOTAL=0
   TEST_SCENARIOS_FAILED=0
   TEST_FAIL_FAST="$fail_fast"
+  TEST_INCLUDE_TAGS=("${include_tags[@]}")
+  TEST_EXCLUDE_TAGS=("${exclude_tags[@]}")
   TEST_ABORT_RUN=0
 
   for feature_file in "${feature_files[@]}"; do

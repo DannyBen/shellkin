@@ -91,6 +91,23 @@ Lines starting with \f[B]#\f[R] are treated as comments.
 # This is a comment
 Feature: Example
 .EE
+.SH TAGS
+Tags can be placed before a \f[B]Feature:\f[R] or \f[B]Scenario:\f[R].
+.IP
+.EX
+\(atfilesystem
+Feature: Files
+
+\(atsmoke
+Scenario: Create a file
+  When I run \(aqtouch one\(aq
+  Then the file \(aqone\(aq should exist
+.EE
+.PP
+Feature tags are inherited by the scenarios in that feature.
+Use \f[B]shellkin \-\-tag \(attag\f[R] to run scenarios with a tag, and
+\f[B]shellkin \-\-exclude\-tag \(attag\f[R] to skip scenarios with a
+tag.
 .SH DOC STRINGS
 Shellkin supports Gherkin\-style doc strings using
 \f[B]\(dq\(dq\(dq\f[R] fences.
@@ -118,7 +135,7 @@ The following common Gherkin constructs are not currently supported:
 .IP \(bu 2
 data tables
 .IP \(bu 2
-tags such as \f[B]\(atslow\f[R]
+hooks
 .SH EXAMPLE
 .IP
 .EX

@@ -7,6 +7,13 @@ Scenario: Running all feature tests
    And the output should include '3 scenarios, 0 failing'
    And the exit code should mean success
 
+Scenario: Filtering scenarios by tag
+  When I run 'shellkin -t @smoke -x @slow features/fixtures/features'
+  Then the output should include 'Feature: one'
+  And the output should include 'Scenario 2: one passes'
+  And the output should include '1 scenario, 0 failing'
+  And the exit code should mean success
+
 Scenario: Running a failing test
   When I run 'shellkin features/fixtures/selective/failing.feature'
   Then the output should include 'Feature: two'

@@ -12,11 +12,16 @@ feature_run() {
   local doc_string_indent=
   local doc_string_content=
   local doc_string_line=
+  local -a feature_tags=()
+  local -a pending_tags=()
+  local -a parsed_tags=()
+  local -a scenario_tags=()
   local -a background_steps=()
   local -a scenario_steps=()
 
   FEATURE_NAME=
   FEATURE_FILE=$feature_file
+  FEATURE_SCENARIO_TAGS=
 
   set +e
 
@@ -53,10 +58,42 @@ feature_run() {
         section=feature
         in_description=1
         FEATURE_NAME=$FEATURE_LINE_NAME
+        # shellcheck disable=SC2034  # consumed through nameref by feature__scenario_tags_set
+        feature_tags=("${pending_tags[@]}")
+        pending_tags=()
+        continue
+        ;;
+      tag)
+        parsed_tags=()
+        feature__tags_parse "$FEATURE_TAG_TEXT" parsed_tags || {
+          failed=1
+          break
+        }
+        if ((feature_seen == 0)); then
+          pending_tags+=("${parsed_tags[@]}")
+        else
+          if ((scenario_seen != 0)); then
+            feature__scenario_tags_set feature_tags scenario_tags
+            if feature_scenario_run "$FEATURE_SCENARIO_NAME" background_steps scenario_steps; then
+              :
+            else
+              failed=1
+              if ((TEST_FAIL_FAST != 0)); then
+                TEST_ABORT_RUN=1
+                scenario_seen=0
+                break
+              fi
+            fi
+            scenario_seen=0
+          fi
+          pending_tags+=("${parsed_tags[@]}")
+          section=tag
+          in_description=0
+        fi
         continue
         ;;
       background)
-        if ((feature_seen == 0 || scenario_seen != 0)); then
+        if ((feature_seen == 0 || scenario_seen != 0 || ${#pending_tags[@]} != 0)); then
           failed=1
           break
         fi
@@ -70,6 +107,7 @@ feature_run() {
           break
         fi
         if ((scenario_seen != 0)); then
+          feature__scenario_tags_set feature_tags scenario_tags
           if feature_scenario_run "$FEATURE_SCENARIO_NAME" background_steps scenario_steps; then
             :
           else
@@ -85,6 +123,9 @@ feature_run() {
         section=scenario
         in_description=0
         FEATURE_SCENARIO_NAME=$FEATURE_LINE_NAME
+        # shellcheck disable=SC2034  # consumed through nameref by feature__scenario_tags_set
+        scenario_tags=("${pending_tags[@]}")
+        pending_tags=()
         scenario_steps=()
         continue
         ;;
@@ -118,7 +159,12 @@ feature_run() {
     esac
   done <"$feature_file"
 
+  if ((failed == 0 && ${#pending_tags[@]} != 0)); then
+    failed=1
+  fi
+
   if ((failed == 0 && scenario_seen != 0)); then
+    feature__scenario_tags_set feature_tags scenario_tags
     if feature_scenario_run "$FEATURE_SCENARIO_NAME" background_steps scenario_steps; then
       :
     else
@@ -128,6 +174,7 @@ feature_run() {
       fi
     fi
   elif ((scenario_seen != 0)); then
+    feature__scenario_tags_set feature_tags scenario_tags
     if feature_scenario_run "$FEATURE_SCENARIO_NAME" background_steps scenario_steps; then
       :
     else
@@ -260,6 +307,10 @@ feature_validate() {
   local doc_string_content=
   local doc_string_line=
   local doc_string_start_line=0
+  local pending_tags_line=0
+  local pending_tags_context=
+  local -a pending_tags=()
+  local -a parsed_tags=()
   local -a background_steps=()
   local -a background_step_lines=()
   local -a scenario_steps=()
@@ -315,11 +366,46 @@ feature_validate() {
         section=feature
         in_description=1
         FEATURE_NAME=$FEATURE_LINE_NAME
+        pending_tags=()
+        pending_tags_line=0
+        pending_tags_context=
+        continue
+        ;;
+      tag)
+        parsed_tags=()
+        if feature__tags_parse "$FEATURE_TAG_TEXT" parsed_tags; then
+          :
+        else
+          feature_validation_set_error "$line_number" "invalid tag syntax" "$(trim "$line")"
+          failed=1
+          break
+        fi
+        if ((feature_seen == 0)); then
+          pending_tags+=("${parsed_tags[@]}")
+        else
+          if ((scenario_seen != 0)); then
+            feature_scenario_validate background_steps background_step_lines scenario_steps scenario_step_lines || failed=1
+            ((failed == 0)) || break
+            scenario_seen=0
+          fi
+          pending_tags+=("${parsed_tags[@]}")
+          section=tag
+          in_description=0
+        fi
+        if ((pending_tags_line == 0)); then
+          pending_tags_line=$line_number
+          pending_tags_context=$(trim "$line")
+        fi
         continue
         ;;
       background)
         if ((feature_seen == 0 || scenario_seen != 0)); then
           feature_validation_set_error "$line_number" "Background must appear after Feature and before the first Scenario" "$(trim "$line")"
+          failed=1
+          break
+        fi
+        if ((pending_tags_line != 0)); then
+          feature_validation_set_error "$pending_tags_line" "tag must appear before Feature or Scenario" "$pending_tags_context"
           failed=1
           break
         fi
@@ -341,6 +427,9 @@ feature_validate() {
         section=scenario
         in_description=0
         FEATURE_SCENARIO_NAME=$FEATURE_LINE_NAME
+        pending_tags=()
+        pending_tags_line=0
+        pending_tags_context=
         scenario_steps=()
         scenario_step_lines=()
         continue
@@ -387,6 +476,11 @@ feature_validate() {
     failed=1
   fi
 
+  if ((failed == 0 && pending_tags_line != 0)); then
+    feature_validation_set_error "$pending_tags_line" "tag must appear before Feature or Scenario" "$pending_tags_context"
+    failed=1
+  fi
+
   if ((failed == 0 && scenario_seen != 0)); then
     feature_scenario_validate background_steps background_step_lines scenario_steps scenario_step_lines || failed=1
   fi
@@ -412,6 +506,8 @@ feature_scenario_run() {
   fi
 
   TARGET_SCENARIO_MATCHED=1
+  feature__scenario_tag_match || return 0
+
   ((TEST_SCENARIOS_TOTAL += 1))
   FEATURE_PREVIOUS_STEP_TYPE=
   SCENARIO_DEFERRED_COMMANDS=()
@@ -492,4 +588,100 @@ feature_doc_string_apply() {
       return 1
       ;;
   esac
+}
+
+feature_tags_validate() {
+  local tag
+
+  FEATURE_TAG_ERROR=
+  for tag in "$@"; do
+    if feature__tag_valid "$tag"; then
+      :
+    else
+      FEATURE_TAG_ERROR="invalid tag: $tag"
+      return 1
+    fi
+  done
+}
+
+feature__tags_parse() {
+  local text=$1
+  local -n tags_ref=$2
+  local tag
+
+  tags_ref=()
+  for tag in $text; do
+    feature__tag_valid "$tag" || return 1
+    tags_ref+=("$tag")
+  done
+
+  ((${#tags_ref[@]} > 0))
+}
+
+feature__scenario_tags_set() {
+  local -n feature_tags_ref=$1
+  local -n scenario_tags_ref=$2
+  local tag
+  local -a tags=()
+
+  FEATURE_SCENARIO_TAGS=
+
+  for tag in "${feature_tags_ref[@]}" "${scenario_tags_ref[@]}"; do
+    feature__tags_include tags "$tag" && continue
+    tags+=("$tag")
+  done
+
+  ((${#tags[@]} == 0)) && return 0
+  printf -v FEATURE_SCENARIO_TAGS '%s ' "${tags[@]}"
+  FEATURE_SCENARIO_TAGS=${FEATURE_SCENARIO_TAGS% }
+}
+
+feature__tags_include() {
+  # shellcheck disable=SC2178  # nameref to an array variable by name
+  local -n tags_ref=$1
+  local expected=$2
+  local tag
+
+  for tag in "${tags_ref[@]}"; do
+    [[ $tag == "$expected" ]] && return 0
+  done
+
+  return 1
+}
+
+feature__tag_valid() {
+  [[ $1 =~ ^@[[:alnum:]_][[:alnum:]_.:-]*$ ]]
+}
+
+feature__scenario_tag_match() {
+  local tag
+  local include_matched=0
+  local -a include_tags=()
+  local -a exclude_tags=()
+  local -a scenario_tags=()
+
+  if declare -p TEST_INCLUDE_TAGS >/dev/null 2>&1; then
+    include_tags=("${TEST_INCLUDE_TAGS[@]}")
+  fi
+  if declare -p TEST_EXCLUDE_TAGS >/dev/null 2>&1; then
+    exclude_tags=("${TEST_EXCLUDE_TAGS[@]}")
+  fi
+
+  # shellcheck disable=SC2034  # consumed through nameref by feature__tags_include
+  read -r -a scenario_tags <<<"$FEATURE_SCENARIO_TAGS"
+
+  for tag in "${exclude_tags[@]}"; do
+    feature__tags_include scenario_tags "$tag" && return 1
+  done
+
+  ((${#include_tags[@]} == 0)) && return 0
+
+  for tag in "${include_tags[@]}"; do
+    if feature__tags_include scenario_tags "$tag"; then
+      include_matched=1
+      break
+    fi
+  done
+
+  ((include_matched != 0))
 }
