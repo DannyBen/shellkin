@@ -5,7 +5,7 @@ load ../../test_helper.bash
 setup() {
   setup_test_environment
   eval "$(declare -f run | sed '1s/^run /bats_run /')"
-  source_libs core/colors core/trim stepdef/pattern stepdef/parse stepdef/hooks feature/syntax stepdef/files user_helpers/run user_helpers/fail user_helpers/defer step/core output/test feature/core
+  source_libs core/colors core/trim stepdef/pattern stepdef/parse stepdef/hooks feature/syntax feature/table stepdef/files user_helpers/run user_helpers/fail user_helpers/defer step/core output/test feature/core
 
   STEPDEF_TYPES=()
   STEPDEF_PATTERNS=()
@@ -329,6 +329,36 @@ EOF
   feature_recorded_step_run $'Then\tthe output should match\tfirst line\nsecond line' ""
 
   [ "$(cat "$TEST_ROOT/doc_string.txt")" = $'first line\nsecond line' ]
+}
+
+@test "feature_recorded_step_run exposes an attached data table through arrays" {
+  stepdef_parse "@Given these users exist"
+  stepdef_register 'printf "%s\n" "${TABLE_HEADER[*]}" "${TABLE_ROWS[@]}" > "$TEST_ROOT/table.txt"'
+  recorded=$'Given\tthese users exist\x1e| name | role |\x1e| Alice | admin |\x1e| Bob | user |'
+
+  feature_recorded_step_run "$recorded" ""
+
+  [ "$(cat "$TEST_ROOT/table.txt")" = $'name role\nAlice\tadmin\nBob\tuser' ]
+}
+
+@test "feature_run rejects data table rows with inconsistent widths" {
+  write_file stepdefs.sh <<'EOF'
+@Given these users exist
+true
+EOF
+  write_file test.feature <<'EOF'
+Feature: Data tables
+
+Scenario: Invalid row
+  Given these users exist
+    | name | role |
+    | Alice |
+EOF
+
+  stepdefs_file_parse "$TEST_ROOT/stepdefs.sh"
+  bats_run feature_run "$TEST_ROOT/test.feature"
+
+  [ "$status" -eq 1 ]
 }
 
 @test "output_error_report_field indents multiline values inside the report frame" {

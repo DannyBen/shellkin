@@ -21,6 +21,13 @@ Scenario: Running hooks from step definition files
   And the output should include '2 scenarios, 0 failing'
   And the exit code should mean success
 
+Scenario: Running a feature that uses a data table
+  When I run 'shellkin features/fixtures/data_tables'
+  Then the output should include 'Feature: data tables'
+  And the output should include 'Scenario 1: Creating several users'
+  And the output should include '1 scenario, 0 failing'
+  And the exit code should mean success
+
 Scenario: Running a failing test
   When I run 'shellkin features/fixtures/selective/failing.feature'
   Then the output should include 'Feature: two'

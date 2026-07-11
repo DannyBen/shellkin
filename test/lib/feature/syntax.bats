@@ -7,6 +7,13 @@ setup() {
   source_libs core/trim feature/syntax
 }
 
+@test "feature_line_parse recognizes a data table row" {
+  feature_line_parse "  | name | role |"
+
+  [ "$FEATURE_LINE_KIND" = table_row ]
+  [ "$FEATURE_TABLE_TEXT" = "| name | role |" ]
+}
+
 teardown() {
   teardown_test_environment
 }

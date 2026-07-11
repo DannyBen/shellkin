@@ -21,6 +21,8 @@ Shellkin currently supports these Gherkin keywords:
 \f[B]Given\f[R], \f[B]When\f[R], \f[B]Then\f[R]
 .IP \(bu 2
 \f[B]And\f[R], \f[B]But\f[R], \f[B]*\f[R]
+.IP \(bu 2
+data tables
 .SH FORMAT
 .SS Feature Header
 Each feature file starts with a \f[B]Feature:\f[R] header.
@@ -124,6 +126,23 @@ Scenario: Match multiline output
 .PP
 The doc string content is exposed to the matching step definition
 through the \f[B]DOC_STRING\f[R] environment variable.
+.SH DATA TABLES
+A data table may follow a step.
+Its first row is exposed to the matching step definition as the
+\f[B]TABLE_HEADER\f[R] array.
+Each remaining row is stored as a tab\-separated value in the
+\f[B]TABLE_ROWS\f[R] array.
+.IP
+.EX
+Given these users exist
+  | name  | role  |
+  | Alice | admin |
+  | Bob   | user  |
+.EE
+.PP
+All rows must contain the same number of cells.
+Cell values are trimmed.
+Escaped pipe characters in cells are not currently supported.
 .SH UNSUPPORTED CONSTRUCTS
 The following common Gherkin constructs are not currently supported:
 .IP \(bu 2
@@ -132,8 +151,6 @@ The following common Gherkin constructs are not currently supported:
 \f[B]Scenario Outline\f[R]
 .IP \(bu 2
 \f[B]Examples\f[R]
-.IP \(bu 2
-data tables
 .SH EXAMPLE
 .IP
 .EX

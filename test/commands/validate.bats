@@ -120,3 +120,23 @@ EOF
   assert_output_contains "line 3: tag must appear before Feature or Scenario"
   assert_output_contains "@setup"
 }
+
+@test "shellkin --validate rejects data table rows with inconsistent widths" {
+  write_file features/example.feature <<'EOF'
+Feature: Data tables
+
+Scenario: Invalid row
+  Given these users exist
+    | name | role |
+    | Alice |
+EOF
+  write_file features/step_definitions/core.sh <<'EOF'
+@Given these users exist
+true
+EOF
+
+  run "$SHELLKIN_REPO_ROOT/shellkin" --validate "$TEST_ROOT/features"
+
+  [ "$status" -ne 0 ]
+  assert_output_contains "data table rows must have the same number of cells"
+}

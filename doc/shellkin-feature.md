@@ -26,6 +26,7 @@ Shellkin currently supports these Gherkin keywords:
 - **Scenario**
 - **Given**, **When**, **Then**
 - **And**, **But**, **\***
+- data tables
 
 FORMAT
 ==================================================
@@ -153,6 +154,23 @@ Scenario: Match multiline output
 The doc string content is exposed to the matching step definition through the
 **DOC_STRING** environment variable.
 
+DATA TABLES
+==================================================
+
+A data table may follow a step. Its first row is exposed to the matching step
+definition as the **TABLE_HEADER** array. Each remaining row is stored as a
+tab-separated value in the **TABLE_ROWS** array.
+
+```gherkin
+Given these users exist
+  | name  | role  |
+  | Alice | admin |
+  | Bob   | user  |
+```
+
+All rows must contain the same number of cells. Cell values are trimmed.
+Escaped pipe characters in cells are not currently supported.
+
 UNSUPPORTED CONSTRUCTS
 ==================================================
 
@@ -161,7 +179,6 @@ The following common Gherkin constructs are not currently supported:
 - **Rule**
 - **Scenario Outline**
 - **Examples**
-- data tables
 
 EXAMPLE
 ==================================================
