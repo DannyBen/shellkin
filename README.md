@@ -68,6 +68,7 @@ Implemented pieces include:
 - step matching with `{token}` placeholders
 - `Background`, `Scenario`, `Given` / `When` / `Then`, `And` / `But`, and `*`
 - doc strings via Gherkin-style `"""` blocks exposed as `DOC_STRING`
+- data tables exposed as `TABLE_HEADER` and `TABLE_ROWS` arrays
 - colored terminal output and scenario summary
 
 ### Gherkin Feature Support
@@ -86,10 +87,10 @@ Implemented pieces include:
 | Tags (`@tag`)                 | Supported   |
 | `Before`, `After` hooks       | Supported   |
 | `BeforeAll`, `AfterAll` hooks | Supported   |
+| Data tables                   | Supported   |
 | `Rule`                        | Unsupported |
 | `Scenario Outline`            | Unsupported |
 | `Examples`                    | Unsupported |
-| Data tables                   | Unsupported |
 
 Tags can be selected with `--tag` / `-t` and skipped with `--exclude-tag` / `-x`.
 `@Before` and `@After` hooks are declared in step definition files and may be
@@ -373,6 +374,8 @@ Shellkin exposes these variables to step definition bodies:
 | `LAST_STDOUT`    | Standard output captured by the most recent `run` call |
 | `LAST_STDERR`    | Standard error captured by the most recent `run` call  |
 | `DOC_STRING`     | Doc string attached to the current step, if any        |
+| `TABLE_HEADER`   | Header cells from the current step's data table array   |
+| `TABLE_ROWS`     | Tab-separated data rows from the current step's table   |
 
 Example:
 

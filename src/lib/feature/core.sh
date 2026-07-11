@@ -144,6 +144,15 @@ feature_run() {
         esac
         continue
         ;;
+      table_row)
+        in_description=0
+        if feature_table_row_apply "$FEATURE_TABLE_TEXT" "$section" background_steps scenario_steps; then
+          :
+        else
+          failed=1
+        fi
+        continue
+        ;;
       doc_string_fence)
         doc_string_indent=${line%%\"\"\"*}
         in_doc_string=1
@@ -194,6 +203,8 @@ feature__recorded_step_parse() {
   local recorded=$1
   local remainder
 
+  recorded=${recorded%%$'\x1e'*}
+
   FEATURE_RECORDED_STEP_KEYWORD=${recorded%%$'\t'*}
   remainder=${recorded#*$'\t'}
   FEATURE_RECORDED_STEP_DOC_STRING=
@@ -212,6 +223,7 @@ feature_recorded_step_validate() {
   local previous_type=$2
   local resolved_type
 
+  feature_table_validate "$recorded" || return 1
   feature__recorded_step_parse "$recorded"
 
   resolved_type=$(feature_step_type_resolve "$previous_type" "$FEATURE_RECORDED_STEP_KEYWORD") || return 1
@@ -234,6 +246,7 @@ feature_recorded_step_run() {
   if [[ -n $FEATURE_RECORDED_STEP_DOC_STRING ]]; then
     export DOC_STRING=$FEATURE_RECORDED_STEP_DOC_STRING
   fi
+  feature_table_export "$recorded" || return 1
 
   step_run "$resolved_type" "$FEATURE_RECORDED_STEP_TEXT"
   status=$?
@@ -271,6 +284,11 @@ feature_scenario_validate() {
 
   for index in "${!background_steps_ref[@]}"; do
     step=${background_steps_ref[$index]}
+    if ! feature_table_validate "$step"; then
+      feature__recorded_step_parse "$step"
+      feature_validation_set_error "${background_lines_ref[$index]}" "data table rows must have the same number of cells for" "$FEATURE_RECORDED_STEP_KEYWORD $FEATURE_RECORDED_STEP_TEXT"
+      return 1
+    fi
     if feature_recorded_step_validate "$step" "$FEATURE_PREVIOUS_STEP_TYPE"; then
       :
     else
@@ -282,6 +300,11 @@ feature_scenario_validate() {
 
   for index in "${!scenario_steps_ref[@]}"; do
     step=${scenario_steps_ref[$index]}
+    if ! feature_table_validate "$step"; then
+      feature__recorded_step_parse "$step"
+      feature_validation_set_error "${scenario_lines_ref[$index]}" "data table rows must have the same number of cells for" "$FEATURE_RECORDED_STEP_KEYWORD $FEATURE_RECORDED_STEP_TEXT"
+      return 1
+    fi
     if feature_recorded_step_validate "$step" "$FEATURE_PREVIOUS_STEP_TYPE"; then
       :
     else
@@ -450,6 +473,16 @@ feature_validate() {
             failed=1
             ;;
         esac
+        continue
+        ;;
+      table_row)
+        in_description=0
+        if feature_table_row_apply "$FEATURE_TABLE_TEXT" "$section" background_steps scenario_steps; then
+          :
+        else
+          feature_validation_set_error "$line_number" "data table must follow a step" "$(trim "$line")"
+          failed=1
+        fi
         continue
         ;;
       doc_string_fence)

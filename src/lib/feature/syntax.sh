@@ -9,6 +9,7 @@ feature_line_parse() {
   FEATURE_STEP_TYPE=
   FEATURE_STEP_TEXT=
   FEATURE_TAG_TEXT=
+  FEATURE_TABLE_TEXT=
 
   if [[ -z $line ]]; then
     FEATURE_LINE_KIND=blank
@@ -52,6 +53,12 @@ feature_line_parse() {
 
   if [[ $line == '"""' ]]; then
     FEATURE_LINE_KIND=doc_string_fence
+    return 0
+  fi
+
+  if [[ $line == \|*\| ]]; then
+    FEATURE_LINE_KIND=table_row
+    FEATURE_TABLE_TEXT=$line
     return 0
   fi
 

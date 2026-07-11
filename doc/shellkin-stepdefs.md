@@ -204,6 +204,8 @@ Shellkin exposes these variables to step definition bodies:
 - **LAST_STDOUT** - standard output captured by the most recent **run** call
 - **LAST_STDERR** - standard error captured by the most recent **run** call
 - **DOC_STRING** - doc string attached to the current step, if any
+- **TABLE_HEADER** - header cells from the current step's data table array
+- **TABLE_ROWS** - tab-separated data rows from the current step's data table
 
 DOC STRINGS
 ==================================================
@@ -222,6 +224,20 @@ Then the output should match
 ```bash
 @Then the output should match
   [[ "$LAST_STDOUT" == "$DOC_STRING" ]]
+```
+
+DATA TABLES
+==================================================
+
+Data tables are exposed through the **TABLE_HEADER** and **TABLE_ROWS** arrays.
+Split each row on tabs to access its cells.
+
+```bash
+@Given these users exist
+for row in "${TABLE_ROWS[@]}"; do
+  IFS=$'\t' read -r name role <<<"$row"
+  create_user "$name" "$role"
+done
 ```
 
 EXAMPLE

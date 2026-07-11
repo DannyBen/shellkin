@@ -192,6 +192,12 @@ Shellkin exposes these variables to step definition bodies:
 \f[B]run\f[R] call
 .IP \(bu 2
 \f[B]DOC_STRING\f[R] \- doc string attached to the current step, if any
+.IP \(bu 2
+\f[B]TABLE_HEADER\f[R] \- header cells from the current step\(aqs data
+table array
+.IP \(bu 2
+\f[B]TABLE_ROWS\f[R] \- tab\-separated data rows from the current
+step\(aqs data table
 .SH DOC STRINGS
 If a feature step is followed by a Gherkin doc string, its content is
 exposed to the step body through \f[B]DOC_STRING\f[R].
@@ -207,6 +213,18 @@ Then the output should match
 .EX
 \(atThen the output should match
   \f[B][[\f[R] \(dq$LAST_STDOUT\(dq == \(dq$DOC_STRING\(dq \f[B]]]\f[R]
+.EE
+.SH DATA TABLES
+Data tables are exposed through the \f[B]TABLE_HEADER\f[R] and
+\f[B]TABLE_ROWS\f[R] arrays.
+Split each row on tabs to access its cells.
+.IP
+.EX
+\(atGiven these users exist
+\f[B]for\f[R] row \f[B]in\f[R] \(dq${TABLE_ROWS[\(at]}\(dq\f[B];\f[R] \f[B]do\f[R]
+  IFS=$\(aq\(rst\(aq read \-r name role <<<\(dq$row\(dq
+  create_user \(dq$name\(dq \(dq$role\(dq
+\f[B]done\f[R]
 .EE
 .SH EXAMPLE
 .IP
