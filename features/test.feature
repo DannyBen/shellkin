@@ -43,6 +43,22 @@ Scenario: Selecting one expanded scenario outline row
   And the output should include '1 scenario, 0 failing'
   And the exit code should mean success
 
+Scenario: Running scenarios grouped by Rules
+  When I run 'shellkin features/fixtures/rules'
+  Then the output should include 'Feature: rules'
+  And the output should include 'Scenario 1: Accessing settings'
+  And the output should include 'Scenario 2: Accessing reports'
+  And the output should include 'Scenario 3: Accessing settings'
+  And the output should include '3 scenarios, 0 failing'
+  And the exit code should mean success
+
+Scenario: Filtering scenarios by a Rule tag
+  When I run 'shellkin --tag @standard features/fixtures/rules'
+  Then the output should include 'Scenario 3: Accessing settings'
+  And the output should not include 'Scenario 1: Accessing settings'
+  And the output should include '1 scenario, 0 failing'
+  And the exit code should mean success
+
 Scenario: Running a failing test
   When I run 'shellkin features/fixtures/selective/failing.feature'
   Then the output should include 'Feature: two'

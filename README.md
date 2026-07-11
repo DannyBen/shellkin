@@ -62,15 +62,12 @@ through the repository `features/` directory.
 
 Implemented pieces include:
 
-- feature discovery from a directory or a single `.feature` file
-- optional support script loading with `--load`
-- step definition loading from `step_definitions/*.sh` and `*.bash`
-- step matching with `{token}` placeholders
-- `Background`, `Scenario`, `Given` / `When` / `Then`, `And` / `But`, and `*`
-- doc strings via Gherkin-style `"""` blocks exposed as `DOC_STRING`
-- data tables exposed as `TABLE_HEADER` and `TABLE_ROWS` arrays
-- `Scenario Outline` expansion from one `Examples` table
-- colored terminal output and scenario summary
+- feature discovery, validation, filtering, and scenario selection
+- English Gherkin features, rules, backgrounds, scenarios, and outlines
+- steps, tags, comments, doc strings, and data tables
+- step definitions with named placeholders and lifecycle hooks
+- optional support script loading
+- fail-fast execution, deferred cleanup, and scenario summaries
 
 ### Gherkin Feature Support
 
@@ -78,8 +75,11 @@ Implemented pieces include:
 |:------------------------------|:------------|
 | `Feature`                     | Supported   |
 | Feature description text      | Supported   |
-| `Scenario`                    | Supported   |
+| `Rule`                        | Supported   |
 | `Background`                  | Supported   |
+| `Scenario`                    | Supported   |
+| `Scenario Outline`            | Supported   |
+| `Examples`                    | Supported   |
 | `Given`, `When`, `Then`       | Supported   |
 | `And` , `But`                 | Supported   |
 | `*` step keyword              | Supported   |
@@ -89,9 +89,10 @@ Implemented pieces include:
 | `Before`, `After` hooks       | Supported   |
 | `BeforeAll`, `AfterAll` hooks | Supported   |
 | Data tables                   | Supported   |
-| `Scenario Outline`            | Supported   |
-| `Examples`                    | Supported   |
-| `Rule`                        | Unsupported |
+
+Shellkin intentionally implements a compact English Gherkin dialect. Keyword
+aliases and localization, multiple Examples blocks, tags on Examples blocks,
+and escaped data-table cells are not currently supported.
 
 Tags can be selected with `--tag` / `-t` and skipped with `--exclude-tag` / `-x`.
 `@Before` and `@After` hooks are declared in step definition files and may be
