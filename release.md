@@ -11,42 +11,42 @@ Release verification for Shellkin. Run this document with
 [runpage](https://github.com/DannyBen/runpage):
 
 ```console :noop
-runpage release.md version:0.1.5
+runpage release.md version:0.2.1
 ```
 
 ## Git is on master and clean
 
-```bash
+```bash :check
 test "$(git branch --show-current)" = master && test -z "$(git status --porcelain)"
 ```
 
 ## Generated executable has the release version
 
-```bash
+```bash :check
 test "$(./shellkin --version)" = "{{ version }}"
 ```
 
 ## Local release tag exists
 
-```bash
+```bash :check
 git rev-parse --quiet --verify "refs/tags/v{{ version }}" >/dev/null
 ```
 
 ## Changelog contains the release
 
-```bash
+```bash :check
 grep -Fq "v{{ version }} -" CHANGELOG.md
 ```
 
 ## GitHub tag exists
 
-```bash
+```bash :check
 curl -fsS -o /dev/null "https://github.com/DannyBen/shellkin/tree/v{{ version }}"
 ```
 
 ## GitHub latest release points to the version
 
-```bash
+```bash :check
 location=$(
   curl -fsSI https://github.com/DannyBen/shellkin/releases/latest |
     tr -d '\r' |
@@ -58,12 +58,12 @@ test "$location" = "https://github.com/DannyBen/shellkin/releases/tag/v{{ versio
 
 ## GitHub release executable is available
 
-```bash
+```bash :check
 curl -fsSI -o /dev/null "https://github.com/DannyBen/shellkin/releases/download/v{{ version }}/shellkin"
 ```
 
 ## GitHub release manpages are available
 
-```bash
+```bash :check
 curl -fsSI -o /dev/null "https://github.com/DannyBen/shellkin/releases/download/v{{ version }}/manpages.tar.gz"
 ```
