@@ -23,6 +23,7 @@ Shellkin currently supports these Gherkin keywords:
 
 - **Feature**
 - **Background**
+- **Rule**
 - **Scenario**
 - **Scenario Outline**, **Examples**
 - **Given**, **When**, **Then**
@@ -71,6 +72,39 @@ feature.
 ```gherkin
 Background:
   Given I am in a temp directory
+```
+
+Rule
+--------------------------------------------------
+
+Use **Rule:** to group scenarios that illustrate one business rule. Tags on a
+Rule are inherited by every scenario in that Rule. Free-form description text
+may appear below the Rule header.
+
+```gherkin
+@admin
+Rule: Administrators can manage users
+  Administrators have access to user management.
+
+  Scenario: Deactivate a user
+    When I deactivate user 'Alice'
+    Then user 'Alice' should be inactive
+```
+
+A Rule may have one **Background:** before its first scenario. Feature
+Background steps run first, followed by Rule Background steps.
+
+```gherkin
+Background:
+  Given the current user is 'Dana'
+
+Rule: Administrators can manage users
+  Background:
+    Given the current role is 'admin'
+
+  Scenario: Deactivate a user
+    When I deactivate user 'Alice'
+    Then user 'Alice' should be inactive
 ```
 
 Scenario Outline
@@ -195,13 +229,6 @@ Given these users exist
 
 All rows must contain the same number of cells. Cell values are trimmed.
 Escaped pipe characters in cells are not currently supported.
-
-UNSUPPORTED CONSTRUCTS
-==================================================
-
-The following common Gherkin constructs are not currently supported:
-
-- **Rule**
 
 EXAMPLE
 ==================================================

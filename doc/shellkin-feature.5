@@ -16,6 +16,8 @@ Shellkin currently supports these Gherkin keywords:
 .IP \(bu 2
 \f[B]Background\f[R]
 .IP \(bu 2
+\f[B]Rule\f[R]
+.IP \(bu 2
 \f[B]Scenario\f[R]
 .IP \(bu 2
 \f[B]Scenario Outline\f[R], \f[B]Examples\f[R]
@@ -54,6 +56,37 @@ in the feature.
 .EX
 Background:
   Given I am in a temp directory
+.EE
+.SS Rule
+Use \f[B]Rule:\f[R] to group scenarios that illustrate one business
+rule.
+Tags on a Rule are inherited by every scenario in that Rule.
+Free\-form description text may appear below the Rule header.
+.IP
+.EX
+\(atadmin
+Rule: Administrators can manage users
+  Administrators have access to user management.
+
+  Scenario: Deactivate a user
+    When I deactivate user \(aqAlice\(aq
+    Then user \(aqAlice\(aq should be inactive
+.EE
+.PP
+A Rule may have one \f[B]Background:\f[R] before its first scenario.
+Feature Background steps run first, followed by Rule Background steps.
+.IP
+.EX
+Background:
+  Given the current user is \(aqDana\(aq
+
+Rule: Administrators can manage users
+  Background:
+    Given the current role is \(aqadmin\(aq
+
+  Scenario: Deactivate a user
+    When I deactivate user \(aqAlice\(aq
+    Then user \(aqAlice\(aq should be inactive
 .EE
 .SS Scenario Outline
 Use \f[B]Scenario Outline:\f[R] with one \f[B]Examples:\f[R] table to
@@ -169,10 +202,6 @@ Given these users exist
 All rows must contain the same number of cells.
 Cell values are trimmed.
 Escaped pipe characters in cells are not currently supported.
-.SH UNSUPPORTED CONSTRUCTS
-The following common Gherkin constructs are not currently supported:
-.IP \(bu 2
-\f[B]Rule\f[R]
 .SH EXAMPLE
 .IP
 .EX

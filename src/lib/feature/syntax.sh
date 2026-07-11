@@ -32,6 +32,12 @@ feature_line_parse() {
     return 0
   fi
 
+  if [[ $line =~ ^Rule:[[:space:]]*(.*)$ ]]; then
+    FEATURE_LINE_KIND=rule
+    FEATURE_LINE_NAME=${BASH_REMATCH[1]}
+    return 0
+  fi
+
   if [[ $line =~ ^Scenario:[[:space:]]*(.*)$ ]]; then
     FEATURE_LINE_KIND=scenario
     FEATURE_LINE_NAME=${BASH_REMATCH[1]}

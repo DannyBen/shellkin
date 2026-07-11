@@ -212,3 +212,83 @@ EOF
   [ "$status" -eq 1 ]
   [ "$FEATURE_VALIDATION_MESSAGE" = "Examples must appear once after a Scenario Outline" ]
 }
+
+@test "feature_parse applies Rule tags and Background only within its Rule" {
+  write_file test.feature <<'EOF'
+@feature
+Feature: Rules
+
+Background:
+  Given feature setup
+
+@first-rule
+Rule: First rule
+  A useful description
+
+  Background:
+    Given first rule setup
+
+  @first-scenario
+  Scenario: First
+    Then first result
+
+@second-rule
+Rule: Second rule
+
+  Scenario: Second
+    Then second result
+EOF
+
+  feature_parse "$TEST_ROOT/test.feature"
+
+  [ "${FEATURE_PARSED_SCENARIO_NAMES[*]}" = "First Second" ]
+  [ "${FEATURE_PARSED_SCENARIO_TAGS[0]}" = "@feature @first-rule @first-scenario" ]
+  [ "${FEATURE_PARSED_SCENARIO_TAGS[1]}" = "@feature @second-rule" ]
+  [ "${FEATURE_PARSED_SCENARIO_STEP_COUNTS[*]}" = "3 2" ]
+  [ "${FEATURE_PARSED_STEPS[0]}" = $'Given\tfeature setup' ]
+  [ "${FEATURE_PARSED_STEPS[1]}" = $'Given\tfirst rule setup' ]
+  [ "${FEATURE_PARSED_STEPS[2]}" = $'Then\tfirst result' ]
+  [ "${FEATURE_PARSED_STEPS[3]}" = $'Given\tfeature setup' ]
+  [ "${FEATURE_PARSED_STEPS[4]}" = $'Then\tsecond result' ]
+}
+
+@test "feature_parse rejects a Rule without scenarios" {
+  write_file test.feature <<'EOF'
+Feature: Rules
+
+Rule: Empty rule
+  A description without scenarios
+EOF
+
+  if feature_parse "$TEST_ROOT/test.feature"; then
+    status=0
+  else
+    status=$?
+  fi
+
+  [ "$status" -eq 1 ]
+  [ "$FEATURE_VALIDATION_MESSAGE" = "Rule must contain at least one Scenario" ]
+}
+
+@test "feature_parse rejects a second Background in one Rule" {
+  write_file test.feature <<'EOF'
+Feature: Rules
+
+Rule: One rule
+  Background:
+    Given first setup
+  Background:
+    Given second setup
+  Scenario: Example
+    Then result
+EOF
+
+  if feature_parse "$TEST_ROOT/test.feature"; then
+    status=0
+  else
+    status=$?
+  fi
+
+  [ "$status" -eq 1 ]
+  [ "$FEATURE_VALIDATION_MESSAGE" = "Rule Background must appear before the first Scenario and only once" ]
+}

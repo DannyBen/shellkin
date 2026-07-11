@@ -5,6 +5,13 @@ feature_parse() {
   local line_number=0
   local section=
   local feature_seen=0
+  local feature_background_seen=0
+  local feature_scenario_seen=0
+  local rule_seen=0
+  local rule_background_seen=0
+  local rule_scenario_seen=0
+  local rule_line=0
+  local rule_name=
   local scenario_seen=0
   local scenario_outline=0
   local scenario_line=0
@@ -20,11 +27,14 @@ feature_parse() {
   local pending_tags_line=0
   local pending_tags_context=
   local -a feature_tags=()
+  local -a rule_tags=()
   local -a pending_tags=()
   local -a parsed_tags=()
   local -a scenario_tags=()
   local -a background_steps=()
   local -a background_step_lines=()
+  local -a feature_background_steps=()
+  local -a feature_background_step_lines=()
   local -a scenario_steps=()
   local -a scenario_step_lines=()
   local -a example_rows=()
@@ -120,8 +130,45 @@ feature_parse() {
         fi
         continue
         ;;
+      rule)
+        if ((feature_seen == 0)); then
+          feature_validation_set_error "$line_number" "Rule must appear after Feature" "$(trim "$line")"
+          failed=1
+          break
+        fi
+        if ((scenario_seen != 0)); then
+          feature__parsed_scenario_finish "$scenario_outline" "$scenario_line" "$examples_line" feature_tags scenario_tags background_steps background_step_lines scenario_steps scenario_step_lines example_rows example_row_lines || {
+            failed=1
+            break
+          }
+          scenario_seen=0
+        fi
+        if ((rule_seen != 0 && rule_scenario_seen == 0)); then
+          feature_validation_set_error "$rule_line" "Rule must contain at least one Scenario" "Rule: $rule_name"
+          failed=1
+          break
+        fi
+        if ((rule_seen == 0)); then
+          feature_background_steps=("${background_steps[@]}")
+          feature_background_step_lines=("${background_step_lines[@]}")
+        fi
+        background_steps=("${feature_background_steps[@]}")
+        background_step_lines=("${feature_background_step_lines[@]}")
+        rule_seen=1
+        rule_background_seen=0
+        rule_scenario_seen=0
+        rule_line=$line_number
+        rule_name=$FEATURE_LINE_NAME
+        rule_tags=("${pending_tags[@]}")
+        pending_tags=()
+        pending_tags_line=0
+        pending_tags_context=
+        section=rule
+        in_description=1
+        continue
+        ;;
       background)
-        if ((feature_seen == 0 || scenario_seen != 0)); then
+        if ((feature_seen == 0)); then
           feature_validation_set_error "$line_number" "Background must appear after Feature and before the first Scenario" "$(trim "$line")"
           failed=1
           break
@@ -130,6 +177,21 @@ feature_parse() {
           feature_validation_set_error "$pending_tags_line" "tag must appear before Feature or Scenario" "$pending_tags_context"
           failed=1
           break
+        fi
+        if ((rule_seen != 0)); then
+          if ((scenario_seen != 0 || rule_scenario_seen != 0 || rule_background_seen != 0)); then
+            feature_validation_set_error "$line_number" "Rule Background must appear before the first Scenario and only once" "$(trim "$line")"
+            failed=1
+            break
+          fi
+          rule_background_seen=1
+        else
+          if ((scenario_seen != 0 || feature_scenario_seen != 0 || feature_background_seen != 0)); then
+            feature_validation_set_error "$line_number" "Background must appear after Feature and before the first Scenario" "$(trim "$line")"
+            failed=1
+            break
+          fi
+          feature_background_seen=1
         fi
         section=background
         in_description=0
@@ -156,10 +218,15 @@ feature_parse() {
         scenario_line=$line_number
         examples_seen=0
         examples_line=0
+        if ((rule_seen != 0)); then
+          rule_scenario_seen=1
+        else
+          feature_scenario_seen=1
+        fi
         section=scenario
         in_description=0
         FEATURE_SCENARIO_NAME=$FEATURE_LINE_NAME
-        scenario_tags=("${pending_tags[@]}")
+        scenario_tags=("${rule_tags[@]}" "${pending_tags[@]}")
         pending_tags=()
         pending_tags_line=0
         pending_tags_context=
@@ -220,7 +287,7 @@ feature_parse() {
         continue
         ;;
       other)
-        if [[ $section == feature && $in_description == 1 ]]; then
+        if [[ $section == feature || $section == rule ]] && ((in_description == 1)); then
           continue
         fi
         feature_validation_set_error "$line_number" "invalid feature syntax" "$FEATURE_LINE_NAME"
@@ -243,6 +310,11 @@ feature_parse() {
 
   if ((failed == 0 && scenario_seen != 0)); then
     feature__parsed_scenario_finish "$scenario_outline" "$scenario_line" "$examples_line" feature_tags scenario_tags background_steps background_step_lines scenario_steps scenario_step_lines example_rows example_row_lines || failed=1
+  fi
+
+  if ((failed == 0 && rule_seen != 0 && rule_scenario_seen == 0)); then
+    feature_validation_set_error "$rule_line" "Rule must contain at least one Scenario" "Rule: $rule_name"
+    failed=1
   fi
 
   return "$failed"

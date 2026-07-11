@@ -32,6 +32,13 @@ teardown() {
   [ "$FEATURE_LINE_NAME" = "Create a file" ]
 }
 
+@test "feature_line_parse recognizes a rule header" {
+  feature_line_parse "Rule: Administrators can manage users"
+
+  [ "$FEATURE_LINE_KIND" = rule ]
+  [ "$FEATURE_LINE_NAME" = "Administrators can manage users" ]
+}
+
 @test "feature_line_parse recognizes a scenario outline header" {
   feature_line_parse "Scenario Outline: Create a <role>"
 
