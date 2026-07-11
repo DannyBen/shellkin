@@ -42,3 +42,13 @@ Shellkin is a Bashly-based Gherkin-style test framework for shell scripts.
 - This is a Bashly project.
 - During normal iteration, regenerate with `bashly generate`.
 - Avoid `bashly generate --force` unless overwriting user-managed files is explicitly intended.
+
+## Skill Maintenance
+
+- Keep `skills/shellkin/` aligned with Shellkin's current user-facing behavior.
+- Whenever a change adds, removes, or alters commands, Gherkin syntax, hooks,
+  helpers, configuration, or step state, review and update both
+  `skills/shellkin/SKILL.md` and its relevant `references/` files in the same
+  change.
+- Treat `README.md` and the man-page sources under `doc/` as the user-facing
+  source of truth when checking the skill for drift.

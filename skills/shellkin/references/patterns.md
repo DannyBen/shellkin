@@ -29,6 +29,59 @@ Scenario: Initialize a new project
 
 Use `Background` only when every scenario needs the same setup.
 
+## Rules And Scoped Backgrounds
+
+```gherkin
+@admin
+Rule: Administrators can manage users
+  Background:
+    Given the current role is 'admin'
+
+  Scenario: Deactivate a user
+    When I deactivate user 'Alice'
+    Then user 'Alice' should be inactive
+```
+
+Feature background steps run before rule background steps. Tags on a rule are
+inherited by its scenarios.
+
+## Scenario Outline
+
+```gherkin
+Scenario Outline: Creating <name> as <role>
+  When I register user '<name>' with role '<role>'
+  Then user '<name>' should have role '<role>'
+
+Examples:
+  | name  | role   |
+  | Alice | admin  |
+  | Bob   | member |
+```
+
+Shellkin supports one `Examples` block per outline. Every placeholder must have
+a matching, unique Examples column.
+
+## Data Table
+
+```gherkin
+Given these users exist
+  | name  | role   |
+  | Alice | admin  |
+  | Bob   | member |
+```
+
+```bash
+@Given these users exist
+  [[ ${TABLE_HEADER[*]} == "name role" ]] || fail "unexpected columns"
+  for row in "${TABLE_ROWS[@]}"; do
+    IFS=$'\t' read -r name role <<<"$row"
+    create_user "$name" "$role"
+  done
+```
+
+`TABLE_HEADER` is an array of header cells. `TABLE_ROWS` contains one
+tab-separated string per data row.
+
 ## Doc String Assertion
 
 ```gherkin
@@ -91,7 +144,10 @@ Use generic path-oriented steps when possible so they can be reused in many feat
 
 When reviewing Shellkin tests, check for:
 
-- Unsupported Gherkin forms such as `Scenario Outline`, `Examples`, `BeforeAll` / `AfterAll`, or tables
+- Unsupported Gherkin forms such as multiple `Examples` blocks, tags on
+  `Examples`, localized keywords, or escaped data-table cells
+- Outline placeholders without a matching, unique `Examples` column
+- Data tables that do not immediately follow a step or have inconsistent row widths
 - `And` or `*` used as the first step in a scenario or background
 - Step text in features that does not exactly line up with step definition headers
 - One-off step definitions that should be generalized with `{tokens}`

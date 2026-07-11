@@ -35,7 +35,9 @@ If external reference is useful, Shellkin source code and documentation are avai
 3. Reuse and extend existing step definitions before adding new ones.
    Keep new steps generic enough to be reused across scenarios.
 4. Write feature files in Shellkin's supported Gherkin subset only.
-   Use `Feature`, optional description text, `Background`, `Scenario`, and steps with `Given`/`When`/`Then` plus `And`/`But`/`*`.
+   This includes `Feature`, `Rule`, `Background`, `Scenario`, `Scenario Outline`
+   with one `Examples` block, data tables, and steps with
+   `Given`/`When`/`Then` plus `And`/`But`/`*`.
 5. Validate before concluding.
    Run `shellkin --validate` first when changing step matching or feature structure.
    Run `shellkin` on the narrowed target for execution checks when the environment allows it.
@@ -65,22 +67,31 @@ If that file grows too large, keep `support.sh` as the entrypoint, add a sibling
 
 - Start each file with `Feature:`.
 - Free text under `Feature:` is allowed before the first section.
-- Use `Background:` only for setup shared by every scenario in that file.
+- Use a feature `Background:` only for setup shared by every scenario in that
+  feature. A `Rule:` may also have one scoped `Background:` before its first
+  scenario; feature background steps run before rule background steps.
 - Use `Scenario:` for each executable example.
-- Tags such as `@slow` may be placed before `Feature:` or `Scenario:`.
+- Use `Scenario Outline:` with one `Examples:` table for parameterized examples.
+  Placeholders may appear in the scenario name, steps, doc strings, and data
+  table cells, and each placeholder must have a matching Examples column.
+- Use `Rule:` to group scenarios around one business rule.
+- Tags such as `@slow` may be placed before `Feature:`, `Rule:`, or `Scenario:`.
+  Feature and rule tags are inherited by their scenarios.
 - Use `shellkin -t @tag` to run matching scenarios and `shellkin -x @tag` to skip matching scenarios.
 - Use `@Before` and `@After` hooks in step definition files when setup or cleanup should wrap scenarios.
+- Use untagged `@BeforeAll` and `@AfterAll` hooks for selected-run setup and
+  teardown. They run only when at least one scenario is selected.
 - Keep scenarios small and concrete.
 - `And`, `But`, and `*` inherit the semantic type of the previous step, so they cannot be the first step in a scenario or background.
 - Use doc strings with `"""` for multiline expectations or input.
+- Use a data table immediately after a step when the step needs structured rows.
 
-Do not use unsupported constructs:
+Shellkin's compact English Gherkin dialect does not support:
 
-- `Rule`
-- `Scenario Outline`
-- `Examples`
-- data tables
-- `BeforeAll` and `AfterAll` hooks
+- keyword aliases or localization
+- multiple `Examples` blocks per scenario outline
+- tags on `Examples` blocks
+- escaped data-table cells
 
 ## Step Definition Rules
 
@@ -94,7 +105,8 @@ Step definitions live in shell files under `step_definitions/` and use headers l
 Follow these rules:
 
 - Step headers must begin with `@Given`, `@When`, or `@Then`.
-- Hook headers must be `@Before`, `@After`, `@Before @tag`, or `@After @tag`.
+- Hook headers may be `@Before`, `@After`, `@Before @tag`, `@After @tag`,
+  `@BeforeAll`, or `@AfterAll`. All-hooks do not accept tags.
 - The body continues until the next header or end of file.
 - Indent step bodies by two spaces for readability.
 - Use named `{tokens}` for variable parts.
@@ -116,6 +128,8 @@ Useful environment variables in step bodies:
 - `LAST_STDOUT`
 - `LAST_STDERR`
 - `DOC_STRING`
+- `TABLE_HEADER` (an array containing the data-table header cells)
+- `TABLE_ROWS` (an array of tab-separated data rows)
 - `FAIL_MESSAGE`
 
 ## Authoring Heuristics
