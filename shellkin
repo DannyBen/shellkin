@@ -221,9 +221,9 @@ version_command() {
 shellkin_usage() {
   if [[ -n $long_usage ]]; then
     printf "shellkin\n\n"
-    printf "  Gherkin-style BDD Test Framework for Bash Scripts\n  Supports configuration from a .shellkin argfile in the working directory\n\n"
+    printf "  Gherkin-style BDD framework for command-line tools and shell scripts\n  Supports configuration from a .shellkin argfile in the working directory\n\n"
   else
-    printf "shellkin - Gherkin-style BDD Test Framework for Bash Scripts\n\n"
+    printf "shellkin - Gherkin-style BDD framework for command-line tools and shell scripts\n\n"
   fi
 
   printf "%s\n" "$(bold "Usage:")"

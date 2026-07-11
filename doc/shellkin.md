@@ -1,11 +1,11 @@
-% shellkin(1) Version 0.2.0 | Gherkin-style BDD Test Framework for Bash Scripts
+% shellkin(1) Version 0.2.0 | Gherkin-style BDD framework for command-line tools and shell scripts
 % Danny Ben Shitrit \<https://github.com/dannyben\>
 % July 2026
 
 NAME
 ==================================================
 
-**shellkin** - Gherkin-style BDD Test Framework for Bash Scripts
+**shellkin** - Gherkin-style BDD framework for command-line tools and shell scripts
 
 SYNOPSIS
 ==================================================
@@ -15,7 +15,7 @@ SYNOPSIS
 DESCRIPTION
 ==================================================
 
-Gherkin-style BDD Test Framework for Bash Scripts
+Gherkin-style BDD framework for command-line tools and shell scripts
 Supports configuration from a .shellkin argfile in the working directory
 
 

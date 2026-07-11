@@ -4,7 +4,9 @@
 
 ![repocard](https://repocard.dannyben.com/svg/shellkin.svg)
 
-Shellkin is a Gherkin-style test framework for Bash scripts.
+Shellkin is a Gherkin-style BDD test framework for command-line tools and shell
+scripts. It is built with [Bashly](https://bashly.dev/) and distributed as a
+single Bash script with no runtime dependencies.
 
 It lets you write feature files such as:
 
