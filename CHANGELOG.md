@@ -1,6 +1,16 @@
 Changelog
 ========================================
 
+v0.2.0 - 2026-07-11
+----------------------------------------
+
+- Add support for data tables [`aa28201`](https://github.com/DannyBen/shellkin/commit/aa28201)
+- Refactor feature parsing into runnable scenarios [`595b40b`](https://github.com/DannyBen/shellkin/commit/595b40b)
+- Add support for `Scenario Outline` and `Examples` [`ca0a47f`](https://github.com/DannyBen/shellkin/commit/ca0a47f)
+- Add support for `Rule` and scoped `Background` [`9529a2e`](https://github.com/DannyBen/shellkin/commit/9529a2e)
+- Compare [`v0.1.4..v0.2.0`](https://github.com/DannyBen/shellkin/compare/v0.1.4..v0.2.0)
+
+
 v0.1.4 - 2026-07-09
 ----------------------------------------
 
