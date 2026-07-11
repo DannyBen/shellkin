@@ -28,6 +28,21 @@ Scenario: Running a feature that uses a data table
   And the output should include '1 scenario, 0 failing'
   And the exit code should mean success
 
+Scenario: Running a scenario outline
+  When I run 'shellkin features/fixtures/scenario_outlines'
+  Then the output should include 'Feature: scenario outlines'
+  And the output should include 'Scenario 1: Creating Alice as admin'
+  And the output should include 'Scenario 2: Creating Bob as member'
+  And the output should include '2 scenarios, 0 failing'
+  And the exit code should mean success
+
+Scenario: Selecting one expanded scenario outline row
+  When I run 'shellkin features/fixtures/scenario_outlines:2'
+  Then the output should include 'Scenario 2: Creating Bob as member'
+  And the output should not include 'Creating Alice as admin'
+  And the output should include '1 scenario, 0 failing'
+  And the exit code should mean success
+
 Scenario: Running a failing test
   When I run 'shellkin features/fixtures/selective/failing.feature'
   Then the output should include 'Feature: two'

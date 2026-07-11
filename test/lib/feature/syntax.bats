@@ -32,6 +32,19 @@ teardown() {
   [ "$FEATURE_LINE_NAME" = "Create a file" ]
 }
 
+@test "feature_line_parse recognizes a scenario outline header" {
+  feature_line_parse "Scenario Outline: Create a <role>"
+
+  [ "$FEATURE_LINE_KIND" = scenario_outline ]
+  [ "$FEATURE_LINE_NAME" = "Create a <role>" ]
+}
+
+@test "feature_line_parse recognizes an examples header" {
+  feature_line_parse "Examples:"
+
+  [ "$FEATURE_LINE_KIND" = examples ]
+}
+
 @test "feature_line_parse recognizes a step line" {
   feature_line_parse "When I run 'touch somefile'"
 

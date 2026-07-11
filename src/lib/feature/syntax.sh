@@ -38,6 +38,17 @@ feature_line_parse() {
     return 0
   fi
 
+  if [[ $line =~ ^Scenario[[:space:]]+Outline:[[:space:]]*(.*)$ ]]; then
+    FEATURE_LINE_KIND=scenario_outline
+    FEATURE_LINE_NAME=${BASH_REMATCH[1]}
+    return 0
+  fi
+
+  if [[ $line =~ ^Examples:[[:space:]]*$ ]]; then
+    FEATURE_LINE_KIND=examples
+    return 0
+  fi
+
   if [[ $line == @* ]]; then
     FEATURE_LINE_KIND=tag
     FEATURE_TAG_TEXT=$line

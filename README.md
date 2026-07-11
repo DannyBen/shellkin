@@ -69,6 +69,7 @@ Implemented pieces include:
 - `Background`, `Scenario`, `Given` / `When` / `Then`, `And` / `But`, and `*`
 - doc strings via Gherkin-style `"""` blocks exposed as `DOC_STRING`
 - data tables exposed as `TABLE_HEADER` and `TABLE_ROWS` arrays
+- `Scenario Outline` expansion from one `Examples` table
 - colored terminal output and scenario summary
 
 ### Gherkin Feature Support
@@ -88,9 +89,9 @@ Implemented pieces include:
 | `Before`, `After` hooks       | Supported   |
 | `BeforeAll`, `AfterAll` hooks | Supported   |
 | Data tables                   | Supported   |
+| `Scenario Outline`            | Supported   |
+| `Examples`                    | Supported   |
 | `Rule`                        | Unsupported |
-| `Scenario Outline`            | Unsupported |
-| `Examples`                    | Unsupported |
 
 Tags can be selected with `--tag` / `-t` and skipped with `--exclude-tag` / `-x`.
 `@Before` and `@After` hooks are declared in step definition files and may be

@@ -18,6 +18,8 @@ Shellkin currently supports these Gherkin keywords:
 .IP \(bu 2
 \f[B]Scenario\f[R]
 .IP \(bu 2
+\f[B]Scenario Outline\f[R], \f[B]Examples\f[R]
+.IP \(bu 2
 \f[B]Given\f[R], \f[B]When\f[R], \f[B]Then\f[R]
 .IP \(bu 2
 \f[B]And\f[R], \f[B]But\f[R], \f[B]*\f[R]
@@ -53,6 +55,30 @@ in the feature.
 Background:
   Given I am in a temp directory
 .EE
+.SS Scenario Outline
+Use \f[B]Scenario Outline:\f[R] with one \f[B]Examples:\f[R] table to
+run the same scenario with several values.
+Each Examples row is a separate scenario.
+.IP
+.EX
+Scenario Outline: Creating <name> as <role>
+  When I register user \(aq<name>\(aq with role \(aq<role>\(aq
+  Then user \(aq<name>\(aq should have role \(aq<role>\(aq
+
+Examples:
+  | name  | role   |
+  | Alice | admin  |
+  | Bob   | member |
+.EE
+.PP
+Placeholders may appear in the scenario name, steps, doc strings, and
+data table cells.
+Every placeholder must have a matching Examples column.
+Examples headings must be unique, and all rows must have the same number
+of cells.
+.PP
+Shellkin currently supports one Examples block per Scenario Outline.
+Tags on Examples blocks are not supported.
 .SS Steps
 Supported step keywords are \f[B]Given\f[R], \f[B]When\f[R],
 \f[B]Then\f[R], \f[B]And\f[R], \f[B]But\f[R], and \f[B]*\f[R].
@@ -147,10 +173,6 @@ Escaped pipe characters in cells are not currently supported.
 The following common Gherkin constructs are not currently supported:
 .IP \(bu 2
 \f[B]Rule\f[R]
-.IP \(bu 2
-\f[B]Scenario Outline\f[R]
-.IP \(bu 2
-\f[B]Examples\f[R]
 .SH EXAMPLE
 .IP
 .EX

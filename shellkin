@@ -820,6 +820,10 @@ feature_parse() {
   local section=
   local feature_seen=0
   local scenario_seen=0
+  local scenario_outline=0
+  local scenario_line=0
+  local examples_seen=0
+  local examples_line=0
   local in_description=0
   local in_doc_string=0
   local failed=0
@@ -837,6 +841,8 @@ feature_parse() {
   local -a background_step_lines=()
   local -a scenario_steps=()
   local -a scenario_step_lines=()
+  local -a example_rows=()
+  local -a example_row_lines=()
 
   FEATURE_NAME=
   FEATURE_VALIDATION_LINE=
@@ -912,7 +918,10 @@ feature_parse() {
           pending_tags+=("${parsed_tags[@]}")
         else
           if ((scenario_seen != 0)); then
-            feature__parsed_scenario_add "$FEATURE_SCENARIO_NAME" feature_tags scenario_tags background_steps background_step_lines scenario_steps scenario_step_lines
+            feature__parsed_scenario_finish "$scenario_outline" "$scenario_line" "$examples_line" feature_tags scenario_tags background_steps background_step_lines scenario_steps scenario_step_lines example_rows example_row_lines || {
+              failed=1
+              break
+            }
             scenario_seen=0
           fi
           pending_tags+=("${parsed_tags[@]}")
@@ -940,16 +949,27 @@ feature_parse() {
         in_description=0
         continue
         ;;
-      scenario)
+      scenario | scenario_outline)
         if ((feature_seen == 0)); then
           feature_validation_set_error "$line_number" "Scenario must appear after Feature" "$(trim "$line")"
           failed=1
           break
         fi
         if ((scenario_seen != 0)); then
-          feature__parsed_scenario_add "$FEATURE_SCENARIO_NAME" feature_tags scenario_tags background_steps background_step_lines scenario_steps scenario_step_lines
+          feature__parsed_scenario_finish "$scenario_outline" "$scenario_line" "$examples_line" feature_tags scenario_tags background_steps background_step_lines scenario_steps scenario_step_lines example_rows example_row_lines || {
+            failed=1
+            break
+          }
         fi
         scenario_seen=1
+        if [[ $FEATURE_LINE_KIND == scenario_outline ]]; then
+          scenario_outline=1
+        else
+          scenario_outline=0
+        fi
+        scenario_line=$line_number
+        examples_seen=0
+        examples_line=0
         section=scenario
         in_description=0
         FEATURE_SCENARIO_NAME=$FEATURE_LINE_NAME
@@ -959,6 +979,20 @@ feature_parse() {
         pending_tags_context=
         scenario_steps=()
         scenario_step_lines=()
+        example_rows=()
+        example_row_lines=()
+        continue
+        ;;
+      examples)
+        if ((scenario_seen == 0 || scenario_outline == 0 || examples_seen != 0)); then
+          feature_validation_set_error "$line_number" "Examples must appear once after a Scenario Outline" "$(trim "$line")"
+          failed=1
+          break
+        fi
+        examples_seen=1
+        examples_line=$line_number
+        section=examples
+        in_description=0
         continue
         ;;
       step)
@@ -981,7 +1015,10 @@ feature_parse() {
         ;;
       table_row)
         in_description=0
-        if feature_table_row_apply "$FEATURE_TABLE_TEXT" "$section" background_steps scenario_steps; then
+        if [[ $section == examples ]]; then
+          example_rows+=("$FEATURE_TABLE_TEXT")
+          example_row_lines+=("$line_number")
+        elif feature_table_row_apply "$FEATURE_TABLE_TEXT" "$section" background_steps scenario_steps; then
           :
         else
           feature_validation_set_error "$line_number" "data table must follow a step" "$(trim "$line")"
@@ -1019,10 +1056,124 @@ feature_parse() {
   fi
 
   if ((failed == 0 && scenario_seen != 0)); then
-    feature__parsed_scenario_add "$FEATURE_SCENARIO_NAME" feature_tags scenario_tags background_steps background_step_lines scenario_steps scenario_step_lines
+    feature__parsed_scenario_finish "$scenario_outline" "$scenario_line" "$examples_line" feature_tags scenario_tags background_steps background_step_lines scenario_steps scenario_step_lines example_rows example_row_lines || failed=1
   fi
 
   return "$failed"
+}
+
+feature__parsed_scenario_finish() {
+  local is_outline=$1
+  local scenario_line=$2
+  local examples_line=$3
+  local feature_tags_name=$4
+  local scenario_tags_name=$5
+  local background_steps_name=$6
+  local background_lines_name=$7
+  local scenario_steps_name=$8
+  local scenario_lines_name=$9
+  local example_rows_name=${10}
+  local example_lines_name=${11}
+
+  if ((is_outline == 0)); then
+    feature__parsed_scenario_add "$FEATURE_SCENARIO_NAME" "$feature_tags_name" "$scenario_tags_name" "$background_steps_name" "$background_lines_name" "$scenario_steps_name" "$scenario_lines_name"
+    return
+  fi
+
+  feature__parsed_outline_add "$scenario_line" "$examples_line" "$feature_tags_name" "$scenario_tags_name" "$background_steps_name" "$background_lines_name" "$scenario_steps_name" "$scenario_lines_name" "$example_rows_name" "$example_lines_name"
+}
+
+feature__parsed_outline_add() {
+  local scenario_line=$1
+  local examples_line=$2
+  local feature_tags_name=$3
+  local scenario_tags_name=$4
+  local background_steps_name=$5
+  local background_lines_name=$6
+  # shellcheck disable=SC2178  # nameref to an array supplied by name
+  local -n scenario_steps_ref=$7
+  local scenario_lines_name=$8
+  local -n scenario_lines_ref=$8
+  local -n example_rows_ref=$9
+  local -n example_lines_ref=${10}
+  local row_index
+  local step_index
+  local heading
+  local previous_heading
+  local expanded_name
+  local -a headings=()
+  local -a cells=()
+  local -a expanded_steps=()
+  local -a seen_headings=()
+
+  if ((examples_line == 0)); then
+    feature_validation_set_error "$scenario_line" "Scenario Outline must have one Examples block" "Scenario Outline: $FEATURE_SCENARIO_NAME"
+    return 1
+  fi
+  if ((${#example_rows_ref[@]} < 2)); then
+    feature_validation_set_error "$examples_line" "Examples must have a header and at least one data row" "Examples:"
+    return 1
+  fi
+
+  feature_table_row_parse "${example_rows_ref[0]}" headings
+  for heading in "${headings[@]}"; do
+    if [[ -z $heading ]]; then
+      feature_validation_set_error "${example_lines_ref[0]}" "Examples headings must not be empty" "${example_rows_ref[0]}"
+      return 1
+    fi
+    for previous_heading in "${seen_headings[@]}"; do
+      if [[ $heading == "$previous_heading" ]]; then
+        feature_validation_set_error "${example_lines_ref[0]}" "Examples headings must be unique" "${example_rows_ref[0]}"
+        return 1
+      fi
+    done
+    seen_headings+=("$heading")
+  done
+
+  for ((row_index = 1; row_index < ${#example_rows_ref[@]}; row_index++)); do
+    feature_table_row_parse "${example_rows_ref[$row_index]}" cells
+    if ((${#cells[@]} != ${#headings[@]})); then
+      feature_validation_set_error "${example_lines_ref[$row_index]}" "Examples rows must have the same number of cells as the header" "${example_rows_ref[$row_index]}"
+      return 1
+    fi
+
+    feature__outline_substitute "$FEATURE_SCENARIO_NAME" headings cells || {
+      feature_validation_set_error "$scenario_line" "no Examples column for placeholder" "$FEATURE_OUTLINE_MISSING_PLACEHOLDER"
+      return 1
+    }
+    expanded_name=$FEATURE_OUTLINE_SUBSTITUTED
+    expanded_steps=()
+    for step_index in "${!scenario_steps_ref[@]}"; do
+      feature__outline_substitute "${scenario_steps_ref[$step_index]}" headings cells || {
+        feature_validation_set_error "${scenario_lines_ref[$step_index]}" "no Examples column for placeholder" "$FEATURE_OUTLINE_MISSING_PLACEHOLDER"
+        return 1
+      }
+      expanded_steps+=("$FEATURE_OUTLINE_SUBSTITUTED")
+    done
+
+    feature__parsed_scenario_add "$expanded_name" "$feature_tags_name" "$scenario_tags_name" "$background_steps_name" "$background_lines_name" expanded_steps "$scenario_lines_name"
+  done
+}
+
+feature__outline_substitute() {
+  local value=$1
+  local -n headings_ref=$2
+  local -n cells_ref=$3
+  local placeholder_regex='<[^>]+>'
+  local pattern
+  local index
+
+  for index in "${!headings_ref[@]}"; do
+    pattern="<${headings_ref[$index]}>"
+    value=${value//"$pattern"/"${cells_ref[$index]}"}
+  done
+
+  FEATURE_OUTLINE_SUBSTITUTED=$value
+  FEATURE_OUTLINE_MISSING_PLACEHOLDER=
+  if [[ $value =~ $placeholder_regex ]]; then
+    FEATURE_OUTLINE_MISSING_PLACEHOLDER=${BASH_REMATCH[0]}
+    return 1
+  fi
 }
 
 feature__parsed_scenario_add() {
@@ -1084,6 +1235,17 @@ feature_line_parse() {
   if [[ $line =~ ^Scenario:[[:space:]]*(.*)$ ]]; then
     FEATURE_LINE_KIND=scenario
     FEATURE_LINE_NAME=${BASH_REMATCH[1]}
+    return 0
+  fi
+
+  if [[ $line =~ ^Scenario[[:space:]]+Outline:[[:space:]]*(.*)$ ]]; then
+    FEATURE_LINE_KIND=scenario_outline
+    FEATURE_LINE_NAME=${BASH_REMATCH[1]}
+    return 0
+  fi
+
+  if [[ $line =~ ^Examples:[[:space:]]*$ ]]; then
+    FEATURE_LINE_KIND=examples
     return 0
   fi
 
