@@ -24,6 +24,7 @@ Shellkin currently supports these Gherkin keywords:
 - **Feature**
 - **Background**
 - **Scenario**
+- **Scenario Outline**, **Examples**
 - **Given**, **When**, **Then**
 - **And**, **But**, **\***
 - data tables
@@ -71,6 +72,30 @@ feature.
 Background:
   Given I am in a temp directory
 ```
+
+Scenario Outline
+--------------------------------------------------
+
+Use **Scenario Outline:** with one **Examples:** table to run the same scenario
+with several values. Each Examples row is a separate scenario.
+
+```gherkin
+Scenario Outline: Creating <name> as <role>
+  When I register user '<name>' with role '<role>'
+  Then user '<name>' should have role '<role>'
+
+Examples:
+  | name  | role   |
+  | Alice | admin  |
+  | Bob   | member |
+```
+
+Placeholders may appear in the scenario name, steps, doc strings, and data
+table cells. Every placeholder must have a matching Examples column. Examples
+headings must be unique, and all rows must have the same number of cells.
+
+Shellkin currently supports one Examples block per Scenario Outline. Tags on
+Examples blocks are not supported.
 
 Steps
 --------------------------------------------------
@@ -177,8 +202,6 @@ UNSUPPORTED CONSTRUCTS
 The following common Gherkin constructs are not currently supported:
 
 - **Rule**
-- **Scenario Outline**
-- **Examples**
 
 EXAMPLE
 ==================================================
