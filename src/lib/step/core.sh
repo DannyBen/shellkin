@@ -25,6 +25,8 @@ step_run() {
   local j
   local step_type
   local body
+  local capture_index
+  local capture_value
   local -a tokens=()
   local -a capture_indexes=()
 
@@ -49,7 +51,16 @@ step_run() {
       fi
 
       for j in "${!tokens[@]}"; do
-        printf -v "${tokens[$j]}" '%s' "${BASH_REMATCH[${capture_indexes[$j]}]}"
+        capture_index=${capture_indexes[$j]}
+        if [[ $capture_index == q* ]]; then
+          capture_index=${capture_index#q}
+          capture_value=${BASH_REMATCH[$capture_index]}
+          capture_value=${capture_value:1:-1}
+        else
+          capture_value=${BASH_REMATCH[$capture_index]}
+        fi
+
+        printf -v "${tokens[$j]}" '%s' "$capture_value"
         export "${tokens[$j]}"
       done
 

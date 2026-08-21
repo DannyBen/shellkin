@@ -40,8 +40,8 @@ teardown() {
 @test "stepdef_parse derives the regex from the template" {
   stepdef_parse "@Then the file '{path}' should exist"
 
-  [ "$STEPDEF_REGEX" = "the file (['\"])(.+)\\1 should exist" ]
-  [ "$STEPDEF_CAPTURE_INDEXES" = "2" ]
+  [ "$STEPDEF_REGEX" = "the file ('.+'|\".+\") should exist" ]
+  [ "$STEPDEF_CAPTURE_INDEXES" = "q1" ]
 }
 
 @test "stepdef_parse returns token names in declaration order" {
@@ -136,9 +136,9 @@ teardown() {
 
   [ "${STEPDEF_TYPES[0]}" = "When" ]
   [ "${STEPDEF_PATTERNS[0]}" = "I run '{command}'" ]
-  [ "${STEPDEF_REGEXES[0]}" = "I run (['\"])(.+)\\1" ]
+  [ "${STEPDEF_REGEXES[0]}" = "I run ('.+'|\".+\")" ]
   [ "${STEPDEF_TOKENS_LIST[0]}" = "command" ]
-  [ "${STEPDEF_CAPTURE_INDEXES_LIST[0]}" = "2" ]
+  [ "${STEPDEF_CAPTURE_INDEXES_LIST[0]}" = "q1" ]
   [ "${STEPDEF_BODIES[0]}" = 'run "$command"' ]
 }
 
@@ -154,6 +154,6 @@ teardown() {
   [ "${STEPDEF_TYPES[1]}" = "Then" ]
   [ "${STEPDEF_TOKENS_LIST[0]}" = "directory" ]
   [ "${STEPDEF_TOKENS_LIST[1]}" = "path" ]
-  [ "${STEPDEF_CAPTURE_INDEXES_LIST[0]}" = "2" ]
-  [ "${STEPDEF_CAPTURE_INDEXES_LIST[1]}" = "2" ]
+  [ "${STEPDEF_CAPTURE_INDEXES_LIST[0]}" = "q1" ]
+  [ "${STEPDEF_CAPTURE_INDEXES_LIST[1]}" = "q1" ]
 }
