@@ -1,6 +1,14 @@
 Changelog
 ========================================
 
+v0.2.1 - 2026-08-21
+----------------------------------------
+
+- Update agent skill [`d5fc732`](https://github.com/DannyBen/shellkin/commit/d5fc732)
+- Fix quoted step match on macOS [`57a4b94`](https://github.com/DannyBen/shellkin/commit/57a4b94)
+- Compare [`v0.2.0..v0.2.1`](https://github.com/DannyBen/shellkin/compare/v0.2.0..v0.2.1)
+
+
 v0.2.0 - 2026-07-11
 ----------------------------------------
 
