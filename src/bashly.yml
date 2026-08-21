@@ -2,7 +2,7 @@ name: shellkin
 help: |
   Gherkin-style BDD framework for command-line tools and shell scripts
   Supports configuration from a .shellkin argfile in the working directory
-version: 0.2.0
+version: 0.2.1
 
 argfile: .shellkin
 

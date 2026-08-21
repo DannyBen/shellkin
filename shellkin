@@ -2822,7 +2822,7 @@ parse_requirements() {
 
 # :command.initialize
 initialize() {
-  declare -g version="0.2.0"
+  declare -g version="0.2.1"
   set -eo pipefail
 
 }

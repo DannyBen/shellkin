@@ -1,6 +1,6 @@
-% shellkin(1) Version 0.2.0 | Gherkin-style BDD framework for command-line tools and shell scripts
+% shellkin(1) Version 0.2.1 | Gherkin-style BDD framework for command-line tools and shell scripts
 % Danny Ben Shitrit \<https://github.com/dannyben\>
-% July 2026
+% August 2026
 
 NAME
 ==================================================
