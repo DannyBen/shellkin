@@ -6,7 +6,6 @@ pattern_regex() {
   local remainder=$pattern
   local literal
   local quote
-  local quote_group
 
   while [[ $remainder =~ ^([^{}]*)\{([A-Za-z_][A-Za-z0-9_]*)\}(.*)$ ]]; do
     literal=${BASH_REMATCH[1]}
@@ -22,12 +21,9 @@ pattern_regex() {
     if [[ -n $quote ]]; then
       literal=${literal%?}
       remainder=${remainder#?}
-      ((capture_index += 1))
-      quote_group=$capture_index
 
       compiled+=$(_pattern_escape_literal "$literal")
-      compiled+='(['\''"])'
-      compiled+="(.+)\\$quote_group"
+      compiled+="('.+'|\".+\")"
       ((capture_index += 1))
       continue
     fi
@@ -78,8 +74,8 @@ pattern_capture_indexes() {
 
     if [[ -n $quote ]]; then
       remainder=${remainder#?}
-      ((capture_index += 2))
-      indexes+=("$capture_index")
+      ((capture_index += 1))
+      indexes+=("q$capture_index")
       continue
     fi
 

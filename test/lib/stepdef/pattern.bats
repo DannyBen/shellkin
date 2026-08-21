@@ -15,14 +15,14 @@ teardown() {
   run pattern_regex "I run '{command}'"
 
   [ "$status" -eq 0 ]
-  [ "$output" = "I run (['\"])(.+)\\1" ]
+  [ "$output" = "I run ('.+'|\".+\")" ]
 }
 
 @test "pattern_regex treats single and double quoted token delimiters interchangeably" {
   run pattern_regex 'I run "{command}"'
 
   [ "$status" -eq 0 ]
-  [ "$output" = "I run (['\"])(.+)\\1" ]
+  [ "$output" = "I run ('.+'|\".+\")" ]
 }
 
 @test "pattern_regex turns multiple tokens into capture groups" {
@@ -78,5 +78,5 @@ teardown() {
   run pattern_capture_indexes "I copy {source} to '{destination}'"
 
   [ "$status" -eq 0 ]
-  [ "$output" = "1 3" ]
+  [ "$output" = "1 q2" ]
 }

@@ -55,6 +55,15 @@ teardown() {
   [ "$STEP_RESULT" = "Something's wrong" ]
 }
 
+@test "step_run rejects mismatched quote delimiters" {
+  stepdef_parse "@Then the text should include '{text}'"
+  stepdef_register 'STEP_RESULT="$text"'
+
+  ! step_run Then "the text should include 'mismatched\""
+
+  [ -z "$STEP_RESULT" ]
+}
+
 @test "step_run returns non-zero when no step definition matches" {
   stepdef_parse "@When I run '{command}'"
   stepdef_register 'run "$command"'
