@@ -21,6 +21,23 @@ jobs:
     - name: Run Shellkin tests
       run: shellkin
 
+  macos_test:
+    name: Run test suite on macOS
+    runs-on: macos-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    - name: Install test dependencies
+      run: brew install bash bats-core shellcheck
+    - name: Run shellcheck tests
+      run: shellcheck shellkin setup uninstall
+    - name: Run Bats tests
+      run: bats --recursive --print-output-on-failure test
+    - name: Add shellkin to PATH
+      run: echo "$GITHUB_WORKSPACE" >> "$GITHUB_PATH"
+    - name: Run Shellkin tests
+      run: shellkin
+
   ubuntu_setup:
     name: Setup on Ubuntu
     runs-on: ubuntu-latest
