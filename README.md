@@ -45,6 +45,13 @@ curl -Ls get.dannyb.co/shellkin/setup | bash
 Feel free to inspect the [setup script](setup) before running.
 
 
+### Installing with Homebrew
+
+```shell
+$ brew install dannyben/tap/shellkin
+```
+
+
 ### Installing manually
 
 Download the `shellkin` bash script from the
